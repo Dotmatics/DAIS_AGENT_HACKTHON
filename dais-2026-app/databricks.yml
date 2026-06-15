@@ -4,12 +4,18 @@ bundle:
 variables:
   sql_warehouse_id:
     description: SQL Warehouse ID
+  postgres_branch:
+    description: Full Lakebase Postgres branch resource name. Obtain by running `databricks postgres list-branches {project-name}`, select the desired item from the output array and use its .name value. Requires the project resource name.
+  postgres_database:
+    description: Full Lakebase Postgres database resource name. Obtain by running `databricks postgres list-databases {branch-name}`, select the desired item from the output array and use its .name value. Requires the branch resource name.
+  postgres_project:
+    description: Full Lakebase Postgres project resource name. Obtain by running `databricks postgres list-projects`, select the desired item from the output array and use its .name value.
 
 resources:
   apps:
     app:
       name: "dais-2026-app"
-      description: "Community Health Access app for India — district health indicators and facility finder"
+      description: "Community Health Access app — India health indicators and facility finder"
       source_code_path: ./
       # Uncomment to enable on behalf of user API scopes. Available scopes: sql, dashboards.genie, files.files, serving.serving-endpoints
       # user_api_scopes:
@@ -21,12 +27,20 @@ resources:
           sql_warehouse:
             id: ${var.sql_warehouse_id}
             permission: CAN_USE
+        - name: postgres
+          postgres:
+            branch: ${var.postgres_branch}
+            database: ${var.postgres_database}
+            permission: CAN_CONNECT_AND_CREATE
 
 targets:
   default:
     default: true
     workspace:
-      host: https://dbc-82716543-5ec5.cloud.databricks.com
+      host: https://dbc-61784abb-0041.cloud.databricks.com
 
     variables:
-      sql_warehouse_id: 898c35fda9b22b8e
+      sql_warehouse_id: 361e282db86de7f5
+      postgres_branch: projects/dais-2026-app/branches/production
+      postgres_database: projects/dais-2026-app/branches/production/databases/databricks-postgres
+      postgres_project: projects/dais-2026-app

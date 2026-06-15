@@ -7,6 +7,7 @@ const APP_CONFIG = {
   name: 'dais-2026-app',
   plugins: [
     'analytics',
+    'lakebase',
   ],
 } as const;
 
@@ -21,6 +22,11 @@ const PLUGIN_PAGES: Record<string, PluginPage> = {
     navLabel: 'Districts',
     path: '/districts',
     expectedTexts: ['District Health Indicators'],
+  },
+  lakebase: {
+    navLabel: 'Facilities',
+    path: '/facilities',
+    expectedTexts: ['Healthcare Facilities'],
   },
 };
 

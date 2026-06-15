@@ -30,7 +30,7 @@
   "keywords": [],
   "author": "",
   "license": "Unlicensed",
-  "description": "Community Health Access app for India — district health indicators and facility finder",
+  "description": "Community Health Access app — India health indicators and facility finder",
   "dependencies": {
     "@databricks/appkit": "0.38.1",
     "@databricks/appkit-ui": "0.38.1",

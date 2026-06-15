@@ -42,10 +42,11 @@ function MetricBar({ label, value }: { label: string; value: number | null }) {
 }
 
 export function DistrictPage() {
-  const [selectedState, setSelectedState] = useState('');
+  const ALL = '__all__';
+  const [selectedState, setSelectedState] = useState(ALL);
 
   const params = useMemo(
-    () => ({ state_ut: sql.string(selectedState) }),
+    () => ({ state_ut: sql.string(selectedState === ALL ? '' : selectedState) }),
     [selectedState]
   );
 
@@ -66,7 +67,7 @@ export function DistrictPage() {
             <SelectValue placeholder="All states & UTs" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="">All states & UTs</SelectItem>
+            <SelectItem value={ALL}>All states & UTs</SelectItem>
             {STATE_LIST.map((s) => (
               <SelectItem key={s} value={s}>{s}</SelectItem>
             ))}

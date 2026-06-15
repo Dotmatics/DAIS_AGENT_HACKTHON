@@ -17,7 +17,7 @@ const navLinkClass = ({ isActive }: { isActive: boolean }) =>
   `px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
     isActive
       ? 'bg-[#FF3621] text-white'
-      : 'text-muted-foreground hover:bg-muted hover:text-foreground'
+      : 'text-white/70 hover:bg-white/10 hover:text-white'
   }`;
 
 const mobileNavLinkClass = ({ isActive }: { isActive: boolean }) =>
@@ -49,7 +49,7 @@ function Layout() {
 
   return (
     <div className="min-h-screen bg-[#F9F7F4] flex flex-col">
-      <header className="bg-[#0B2026] border-b border-[#0B2026]/20 px-4 md:px-6 py-3 flex items-center gap-4">
+      <header className="bg-[#0B2026] px-4 md:px-6 py-3 flex items-center gap-4">
         <div className="flex items-center gap-2">
           <HeartPulse className="h-5 w-5 text-[#FF3621]" />
           <h1 className="text-lg font-semibold text-white">India Health Access</h1>

@@ -4,6 +4,7 @@ A Databricks App powered by [AppKit](https://www.databricks.com/devhub/docs/appk
 
 **Enabled plugins:**
 - **Analytics** -- SQL query execution against Databricks SQL Warehouses
+- **Lakebase** -- Fully managed Postgres database for transactional (OLTP) workloads on Databricks
 - **Server** -- Express HTTP server with static file serving and Vite dev mode
 
 ## Prerequisites
@@ -29,6 +30,10 @@ DATABRICKS_HOST=https://your-workspace.cloud.databricks.com
 DATABRICKS_APP_PORT=8000
 # ... other environment variables, depending on the plugins you use
 ```
+
+#### Lakebase Configuration
+
+The Lakebase plugin requires additional environment variables for PostgreSQL connectivity. To learn how to configure the Lakebase plugin, see the [Lakebase plugin documentation](https://www.databricks.com/devhub/docs/appkit/v0/plugins/lakebase).
 
 ### CLI Authentication
 
