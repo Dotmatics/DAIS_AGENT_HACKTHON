@@ -178,18 +178,26 @@ git commit -m "Remove unused status field from IntakeSession"
 
 The `usage-dashboard` app uses a two-step manual deploy (bundle deploy panics due to a CLI rename bug — use import-dir + apps deploy instead).
 
-- [ ] **Step 1: Deploy to Databricks**
+- [ ] **Step 1: Build locally**
 
-Run from the `usage-dashboard` directory:
+The app compiles TypeScript to `dist/` before uploading. Run from the `usage-dashboard` directory:
 ```bash
 cd /Users/aaron.kurtz/Code/DAIS_AGENT_HACKTHON/usage-dashboard
+npm run build
+```
+
+Expected: exits 0 with no errors. This ensures `dist/` contains the rewritten SQL from Tasks 1 and 2 before upload.
+
+- [ ] **Step 2: Deploy to Databricks**
+
+```bash
 databricks workspace import-dir . /Workspace/Users/aaron_dais_2026@icloud.com/.bundle/usage-dashboard/default/files --overwrite --profile dais-2026-lakebase
 databricks apps deploy usage-dashboard --source-code-path /Workspace/Users/aaron_dais_2026@icloud.com/.bundle/usage-dashboard/default/files --profile dais-2026-lakebase
 ```
 
 Expected: deploy completes without error. The second command streams progress until `RUNNING`.
 
-- [ ] **Step 2: Verify app is running**
+- [ ] **Step 3: Verify app is running**
 
 ```bash
 databricks apps get usage-dashboard --profile dais-2026-lakebase -o json | python3 -c "import json,sys; d=json.load(sys.stdin); print(d['app_status']['state'])"
@@ -197,7 +205,7 @@ databricks apps get usage-dashboard --profile dais-2026-lakebase -o json | pytho
 
 Expected output: `RUNNING`
 
-- [ ] **Step 3: Smoke-check the three routes**
+- [ ] **Step 4: Smoke-check the three routes**
 
 The live URL is `https://usage-dashboard-7474644358787296.aws.databricksapps.com`. Hit each route (you'll need to be authenticated — use the app's browser session or check if the routes are publicly accessible via the app):
 
