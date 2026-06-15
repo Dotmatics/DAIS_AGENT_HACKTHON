@@ -6,7 +6,7 @@
 
 **Architecture:** Express server exposes three read-only Lakebase routes; React client fetches them via `fetch` and NFHS-5 data via `useAnalyticsQuery`; gap threshold stored in React context updates counts client-side without refetch.
 
-**Tech Stack:** Databricks AppKit 0.38.1, React 19, react-simple-maps, d3-scale, Tailwind CSS, TypeScript
+**Tech Stack:** Databricks AppKit 0.38.1, React 19, react-simple-maps, d3-scale, d3-scale-chromatic, Tailwind CSS, TypeScript
 
 ---
 
@@ -37,13 +37,20 @@
 - [ ] Run install:
 ```bash
 cd /Users/aaron.kurtz/Code/DAIS_AGENT_HACKTHON/dais-2026-app
-npm install react-simple-maps d3-scale
-npm install --save-dev @types/d3-scale
+npm install react-simple-maps d3-scale d3-scale-chromatic
+npm install --save-dev @types/d3-scale @types/d3-scale-chromatic
 ```
+- [ ] Download India states TopoJSON as a local asset (avoids CDN 404 during demo):
+```bash
+curl -L "https://raw.githubusercontent.com/AshKyd/geojson-regions/master/countries/110m/IND/states.topojson" \
+  -o client/src/assets/india-states.json
+```
+If that URL is unavailable, use the topojson from `topojson-client` or any India states topojson with a `name` or `ST_NM` property. Verify the file downloads and contains `"type":"Topology"`.
+
 - [ ] Verify no peer dep errors, then commit:
 ```bash
-git add package.json package-lock.json
-git commit -m "Add react-simple-maps and d3-scale dependencies"
+git add package.json package-lock.json client/src/assets/india-states.json
+git commit -m "Add map dependencies and bundle India states GeoJSON asset"
 ```
 
 ---
@@ -474,7 +481,6 @@ import { useAnalyticsQuery, Card, CardContent, CardHeader, CardTitle, Skeleton, 
 import { Activity, Droplets, Zap, Shield } from 'lucide-react';
 import { fetchIntakeStats, fetchGapsByState, type IntakeStats, type GapByState } from '../lib/intakeApi';
 import { normalizeState } from '../lib/stateNormalization';
-import { useGapThreshold } from '../context/GapThresholdContext';
 
 const EMPTY = {};
 
@@ -497,7 +503,6 @@ export function OverviewPage() {
   const { data: nfhs, loading: nfhsLoading } = useAnalyticsQuery('state_summary', params);
   const [stats, setStats] = useState<IntakeStats | null>(null);
   const [gapsByState, setGapsByState] = useState<GapByState[]>([]);
-  const { threshold } = useGapThreshold();
 
   useEffect(() => {
     fetchIntakeStats().then(setStats).catch(console.error);
@@ -655,7 +660,8 @@ import { sql } from '@databricks/appkit-ui/js';
 import { fetchGapsByState, type GapByState } from '../lib/intakeApi';
 import { normalizeState } from '../lib/stateNormalization';
 
-const GEO_URL = 'https://raw.githubusercontent.com/deldersveld/topojson/master/countries/india/india-states.json';
+import indiaStates from '../assets/india-states.json';
+const GEO_URL = indiaStates;
 const ALL = '__all__';
 
 function gapColor(pct: number | undefined): string {
@@ -754,7 +760,8 @@ export function DistrictPage() {
                 <Geographies geography={GEO_URL}>
                   {({ geographies }) =>
                     geographies.map(geo => {
-                      const stateName = geo.properties.st_nm ?? geo.properties.NAME_1 ?? '';
+                      // Property key depends on your bundled GeoJSON — check with Object.keys(geo.properties) if map shows empty
+                      const stateName: string = geo.properties.ST_NM ?? geo.properties.st_nm ?? geo.properties.NAME_1 ?? geo.properties.name ?? '';
                       const gapData = gapMap[stateName];
                       return (
                         <Geography
