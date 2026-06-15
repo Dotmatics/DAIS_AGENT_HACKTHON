@@ -1,12 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-  Input,
-} from '@databricks/appkit-ui/react';
+import { Input } from '@databricks/appkit-ui/react';
 import { ArrowUp, Battery, ChevronLeft, HeartPulse, Info, Plus, Signal, Wifi } from 'lucide-react';
+import { PageHeader } from '../../components/PageHeader';
 
 interface Message {
   direction: 'inbound' | 'outbound';
@@ -14,37 +9,8 @@ interface Message {
   created_at?: string;
 }
 
-interface SessionInfo {
-  postal_code?: string | null;
-  age?: number | null;
-  symptoms?: string | null;
-  status?: string;
-}
-
 interface ThreadData {
-  session: SessionInfo | null;
   messages: Message[];
-  recommendations: Array<{
-    facility_name: string;
-    facility_phone: string;
-    distance_km: number;
-    rank: number;
-  }>;
-  coverageGap: {
-    has_coverage_gap: boolean;
-    nearest_distance_km: number;
-  } | null;
-}
-
-interface GapStats {
-  stats: { total_sessions: string; completed_sessions: string; coverage_gaps: string };
-  recentGaps: Array<{
-    postal_code: string;
-    symptoms: string;
-    nearest_distance_km: number;
-    has_coverage_gap: boolean;
-    phone: string;
-  }>;
 }
 
 function formatMessageTime(iso?: string) {
@@ -104,21 +70,16 @@ function PhoneSmsChat({
 
   return (
     <div className="relative mx-auto w-full max-w-[390px]">
-      {/* Phone frame */}
       <div className="rounded-[3rem] bg-gradient-to-b from-zinc-700 via-zinc-800 to-zinc-900 p-3 shadow-[0_25px_60px_-12px_rgba(0,0,0,0.55)] ring-1 ring-white/10">
-        {/* Side buttons (decorative) */}
         <div className="absolute -left-[2px] top-28 h-10 w-[3px] rounded-l bg-zinc-600" />
         <div className="absolute -left-[2px] top-44 h-16 w-[3px] rounded-l bg-zinc-600" />
         <div className="absolute -left-[2px] top-64 h-16 w-[3px] rounded-l bg-zinc-600" />
         <div className="absolute -right-[2px] top-36 h-20 w-[3px] rounded-r bg-zinc-600" />
 
-        {/* Screen */}
         <div className="relative flex h-[680px] flex-col overflow-hidden rounded-[2.35rem] bg-[#000]">
-          {/* Wallpaper + messages app */}
           <div className="relative flex min-h-0 flex-1 flex-col bg-gradient-to-b from-[#1c1c1e] via-[#0f0f10] to-[#0a0a0b]">
             <StatusBar />
 
-            {/* Messages header */}
             <div className="flex items-center gap-2 border-b border-white/5 bg-[#1c1c1e]/95 px-3 py-2.5 backdrop-blur-md">
               <ChevronLeft className="h-5 w-5 text-[#0a84ff]" strokeWidth={2.5} />
               <div className="flex min-w-0 flex-1 items-center gap-2.5">
@@ -126,14 +87,13 @@ function PhoneSmsChat({
                   <HeartPulse className="h-[18px] w-[18px] text-white" strokeWidth={2.5} />
                 </div>
                 <div className="min-w-0">
-                  <div className="truncate text-[15px] font-semibold text-white">Aaron Health</div>
+                  <div className="truncate text-[15px] font-semibold text-white">Luma Health</div>
                   <div className="truncate text-[11px] text-zinc-400">{phone || 'Demo SMS line'}</div>
                 </div>
               </div>
               <Info className="h-5 w-5 text-[#0a84ff]" strokeWidth={2.5} />
             </div>
 
-            {/* Chat thread */}
             <div
               ref={scrollRef}
               className="min-h-0 flex-1 space-y-3 overflow-y-auto px-3 py-4"
@@ -147,7 +107,7 @@ function PhoneSmsChat({
                   <div className="mb-3 flex h-14 w-14 items-center justify-center rounded-full bg-white/5 ring-1 ring-white/10">
                     <HeartPulse className="h-7 w-7 text-emerald-400" />
                   </div>
-                  <p className="text-sm font-medium text-zinc-300">Aaron Rural Health SMS</p>
+                  <p className="text-sm font-medium text-zinc-300">Luma Rural Health SMS</p>
                   <p className="mt-2 text-xs leading-relaxed text-zinc-500">
                     Try &quot;I don&apos;t feel well&quot; — we&apos;ll ask for pincode, age, and symptoms.
                   </p>
@@ -191,7 +151,6 @@ function PhoneSmsChat({
               )}
             </div>
 
-            {/* Composer */}
             <form
               onSubmit={onSubmit}
               className="border-t border-white/5 bg-[#1c1c1e]/95 px-3 py-2.5 backdrop-blur-md"
@@ -230,7 +189,6 @@ function PhoneSmsChat({
               </div>
             </form>
 
-            {/* Home indicator */}
             <div className="flex justify-center pb-2 pt-1">
               <div className="h-1 w-28 rounded-full bg-white/30" />
             </div>
@@ -251,10 +209,6 @@ export function SmsPage() {
   const [phone, setPhone] = useState('+919876543210');
   const [input, setInput] = useState('');
   const [messages, setMessages] = useState<Message[]>([]);
-  const [session, setSession] = useState<SessionInfo | null>(null);
-  const [recommendations, setRecommendations] = useState<ThreadData['recommendations']>([]);
-  const [coverageGap, setCoverageGap] = useState<ThreadData['coverageGap']>(null);
-  const [gapStats, setGapStats] = useState<GapStats | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -264,21 +218,7 @@ export function SmsPage() {
     if (!res.ok) throw new Error('Failed to load thread');
     const data: ThreadData = await res.json();
     setMessages(data.messages);
-    setSession(data.session);
-    setRecommendations(data.recommendations);
-    setCoverageGap(data.coverageGap);
   }, []);
-
-  const loadStats = useCallback(async () => {
-    const res = await fetch('/api/sms/stats');
-    if (res.ok) {
-      setGapStats(await res.json());
-    }
-  }, []);
-
-  useEffect(() => {
-    loadStats().catch(() => undefined);
-  }, [loadStats]);
 
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: 'smooth' });
@@ -299,7 +239,6 @@ export function SmsPage() {
       });
       if (!res.ok) throw new Error('SMS send failed');
       await loadThread(phone.trim());
-      await loadStats();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Unknown error');
     } finally {
@@ -308,89 +247,36 @@ export function SmsPage() {
   };
 
   return (
-    <div className="grid grid-cols-1 gap-8 xl:grid-cols-[minmax(0,1fr)_340px] max-w-7xl mx-auto">
-      <div className="space-y-6">
-        <div className="text-center xl:text-left">
-          <h2 className="text-2xl font-bold text-foreground">Mock SMS Health Check</h2>
-          <p className="text-sm text-muted-foreground mt-1 max-w-xl mx-auto xl:mx-0">
-            Simulates SMS for rural users on a mobile device. Collects pincode, age, and symptoms,
-            then recommends nearby facilities.
-          </p>
-        </div>
+    <div className="mx-auto max-w-lg space-y-6">
+      <PageHeader
+        title="Rural Health SMS"
+        subtitle="Mock SMS for rural users — collect pincode, age, and symptoms, then find nearby facilities."
+      />
 
-        <div className="mx-auto w-full max-w-[390px]">
-          <label htmlFor="demo-phone" className="mb-2 block text-sm font-medium text-foreground">
-            Phone number
-          </label>
-          <Input
-            id="demo-phone"
-            value={phone}
-            onChange={(e) => setPhone(e.target.value)}
-            onBlur={() => loadThread(phone.trim()).catch(() => undefined)}
-            placeholder="+919876543210"
-            className="font-mono"
-          />
-        </div>
-
-        <PhoneSmsChat
-          phone={phone}
-          messages={messages}
-          input={input}
-          loading={loading}
-          error={error}
-          scrollRef={scrollRef}
-          onInputChange={setInput}
-          onSubmit={sendMessage}
+      <div className="mx-auto w-full max-w-[390px]">
+        <label htmlFor="demo-phone" className="mb-2 block text-sm font-medium text-[#0B2026]">
+          Phone number
+        </label>
+        <Input
+          id="demo-phone"
+          value={phone}
+          onChange={(e) => setPhone(e.target.value)}
+          onBlur={() => loadThread(phone.trim()).catch(() => undefined)}
+          placeholder="+919876543210"
+          className="border-[#EEEDE9] bg-white font-mono focus-visible:ring-[#FF3621]"
         />
       </div>
 
-      <div className="space-y-4">
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">Extracted intake</CardTitle>
-          </CardHeader>
-          <CardContent className="text-sm space-y-2">
-            <div><span className="text-muted-foreground">Pincode:</span> {session?.postal_code ?? '—'}</div>
-            <div><span className="text-muted-foreground">Age:</span> {session?.age ?? '—'}</div>
-            <div><span className="text-muted-foreground">Symptoms:</span> {session?.symptoms ?? '—'}</div>
-            <div><span className="text-muted-foreground">Status:</span> {session?.status ?? 'new'}</div>
-          </CardContent>
-        </Card>
-
-        {recommendations.length > 0 && (
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base">Recommended facilities</CardTitle>
-            </CardHeader>
-            <CardContent className="text-sm space-y-3">
-              {recommendations.map((r) => (
-                <div key={r.rank} className="border-b pb-2 last:border-0">
-                  <div className="font-medium">{r.facility_name}</div>
-                  <div className="text-muted-foreground">{Math.round(r.distance_km)} km · {r.facility_phone}</div>
-                </div>
-              ))}
-              {coverageGap?.has_coverage_gap && (
-                <p className="text-amber-600 dark:text-amber-400">
-                  Coverage gap: nearest facility {Math.round(coverageGap.nearest_distance_km)} km away.
-                </p>
-              )}
-            </CardContent>
-          </Card>
-        )}
-
-        {gapStats && (
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base">Coverage gap stats</CardTitle>
-            </CardHeader>
-            <CardContent className="text-sm space-y-2">
-              <div>Sessions: {gapStats.stats.total_sessions}</div>
-              <div>Completed: {gapStats.stats.completed_sessions}</div>
-              <div>Gaps flagged: {gapStats.stats.coverage_gaps}</div>
-            </CardContent>
-          </Card>
-        )}
-      </div>
+      <PhoneSmsChat
+        phone={phone}
+        messages={messages}
+        input={input}
+        loading={loading}
+        error={error}
+        scrollRef={scrollRef}
+        onInputChange={setInput}
+        onSubmit={sendMessage}
+      />
     </div>
   );
 }

@@ -1,6 +1,6 @@
 ---
-name: Aaron SMS Health Agent
-overview: Build "Aaron" — a Databricks App with Agent Bricks conversational intake (mock SMS UI), Lakebase persistence for user sessions and gap-analysis records, and Lakebase synced tables for sub-second facility proximity lookups against the Virtue Foundation hackathon dataset.
+name: Luma SMS Health Agent
+overview: Build "Luma" — a Databricks App with Agent Bricks conversational intake (mock SMS UI), Lakebase persistence for user sessions and gap-analysis records, and Lakebase synced tables for sub-second facility proximity lookups against the Virtue Foundation hackathon dataset.
 todos:
   - id: setup-profile
     content: Configure hackathon-dais CLI profile and init git repo with .gitignore
@@ -8,8 +8,8 @@ todos:
   - id: lakebase-project
     content: Create Lakebase project aaron-health, enable CDF, sync facilities + pincode tables
     status: pending
-  - id: scaffold-aaron
-    content: Scaffold aaron app with analytics,lakebase,agents features and deploy
+  - id: scaffold-luma
+    content: Scaffold luma app with analytics,lakebase,agents features and deploy
     status: pending
   - id: lakebase-schema
     content: Implement sms_sessions, sms_messages, facility_recommendations, coverage_gaps tables
@@ -32,7 +32,7 @@ todos:
 isProject: false
 ---
 
-# Aaron: SMS Health Check & Location Agent
+# Luma: SMS Health Check & Location Agent
 
 ## Decisions Locked In
 
@@ -41,7 +41,7 @@ isProject: false
 | SMS interface | **Mock SMS** — in-app chat UI + `POST /api/sms/inbound` for curl demos; real Twilio can be added later |
 | Facility reads | **Lakebase synced tables** — sync `facilities` + `india_post_pincode_directory` into Postgres for fast proximity queries |
 | Databricks profile | **`hackathon-dais`** → `https://dbc-90be8f46-8e3a.cloud.databricks.com/` (PAT stored in `~/.databrickscfg`, never committed) |
-| App name | **`aaron`** (≤26 chars, AppKit convention) |
+| App name | **`luma`** (≤26 chars, AppKit convention) |
 
 ## Available Data (already in Unity Catalog)
 
@@ -64,23 +64,23 @@ Warehouse: `e4e23f31c3028908` (Serverless Starter Warehouse)
 ```mermaid
 sequenceDiagram
     participant User as RuralUser_MockSMS
-    participant Aaron as AaronApp
+    participant Luma as LumaApp
     participant Agent as AgentBricks_Supervisor
     participant LB as Lakebase_Postgres
     participant Sync as SyncedTables
 
-    User->>Aaron: SMS message
-    Aaron->>LB: Load/create session by phone
-    Aaron->>Agent: Message + session context
-    Agent->>Aaron: Extracted fields + next question
-    Aaron->>LB: Save partial intake
+    User->>Luma: SMS message
+    Luma->>LB: Load/create session by phone
+    Luma->>Agent: Message + session context
+    Agent->>Luma: Extracted fields + next question
+    Luma->>LB: Save partial intake
     alt All required fields collected
-        Aaron->>Sync: Nearest facilities by pincode + symptoms
-        Sync-->>Aaron: Top N facilities + distances
-        Aaron->>LB: Log recommendations + gap flags
-        Aaron->>User: SMS reply with facilities
+        Luma->>Sync: Nearest facilities by pincode + symptoms
+        Sync-->>Luma: Top N facilities + distances
+        Luma->>LB: Log recommendations + gap flags
+        Luma->>User: SMS reply with facilities
     else Missing fields
-        Aaron->>User: Dynamic follow-up question
+        Luma->>User: Dynamic follow-up question
     end
 ```
 
@@ -110,7 +110,7 @@ sequenceDiagram
 1. **Create Lakebase project** (Autoscaling):
    ```bash
    databricks postgres create-project aaron-health \
-     --json '{"spec": {"display_name": "Aaron Health Agent"}}' \
+     --json '{"spec": {"display_name": "Luma Health Agent"}}' \
      --profile hackathon-dais
    ```
 
@@ -135,13 +135,13 @@ sequenceDiagram
 
 ---
 
-## Phase 2: Scaffold Aaron App
+## Phase 2: Scaffold Luma App
 
 Run manifest discovery, then init with hybrid features:
 
 ```bash
 databricks apps manifest --profile hackathon-dais
-databricks apps init --name aaron \
+databricks apps init --name luma \
   --features analytics,lakebase,agents \
   --set analytics.sql-warehouse.id=e4e23f31c3028908 \
   --set lakebase.postgres.branch=projects/aaron-health/branches/production \
@@ -153,7 +153,7 @@ databricks apps init --name aaron \
 
 **Deploy before local dev** (Lakebase SP must own the schema):
 ```bash
-databricks apps deploy aaron --profile hackathon-dais
+databricks apps deploy luma --profile hackathon-dais
 ```
 
 ---
@@ -251,13 +251,13 @@ CREATE TABLE coverage_gaps (
 For hackathon demo credibility, also create a Supervisor Agent wired to a UC function tool:
 
 ```bash
-databricks supervisor-agents create-supervisor-agent "Aaron Health Intake" \
+databricks supervisor-agents create-supervisor-agent "Luma Health Intake" \
   --description "Extracts location, age, symptoms from SMS" \
   --instructions "Collect postal code first, then age, then symptoms. Route facility queries to lookup function." \
   --profile hackathon-dais
 ```
 
-Attach UC function `workspace.aaron.lookup_facilities(postal_code, symptoms, age)` as a tool.
+Attach UC function `workspace.luma.lookup_facilities(postal_code, symptoms, age)` as a tool.
 
 ---
 
@@ -312,7 +312,7 @@ SELECT * FROM scored ORDER BY dist_km LIMIT 5;
 - **Right panel:** Admin view — extracted fields, recommended facilities, gap flag
 - **Demo curl:**
   ```bash
-  curl -X POST https://<aaron-app-url>/api/sms/inbound \
+  curl -X POST https://<luma-app-url>/api/sms/inbound \
     -H 'Content-Type: application/json' \
     -d '{"phone":"+919876543210","message":"I am in pincode 504273, age 45, having fever"}'
   ```
@@ -336,7 +336,7 @@ These read from Lakebase-synced recommendation data (either sync back to UC or q
 ## Phase 8: Deploy & Demo Script
 
 1. `databricks apps validate --profile hackathon-dais`
-2. `databricks apps deploy aaron --profile hackathon-dais`
+2. `databricks apps deploy luma --profile hackathon-dais`
 3. Update [`tests/smoke.spec.ts`](tests/smoke.spec.ts) selectors for chat UI
 4. **Demo flow:**
    - User: "I don't feel well"

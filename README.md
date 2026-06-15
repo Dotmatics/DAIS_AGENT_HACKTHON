@@ -1,4 +1,4 @@
-# Aaron — Rural SMS Health Agent
+# Luma — Rural SMS Health Agent
 
 Databricks hackathon app: mock SMS intake for location, age, and symptoms, with facility recommendations from the Virtue Foundation dataset and coverage gap tracking in Lakebase.
 
@@ -56,7 +56,7 @@ npm install
 npm run build
 
 # Upload source to workspace (or use databricks apps deploy which syncs automatically)
-databricks sync . /Workspace/Users/anna.sobolewska@gmail.com/.bundle/aaron/default/files
+databricks sync . /Workspace/Users/anna.sobolewska@gmail.com/.bundle/luma/default/files
 
 # One-time / after fresh app create: grant app SP access to Virtue Foundation catalog
 npm run setup:permissions
@@ -72,7 +72,7 @@ Or use the combined helper (build + grant + deploy):
 DATABRICKS_CONFIG_PROFILE=trialbridge npm run setup:deploy
 ```
 
-**Analytics permission fix:** The app runs SQL as its service principal (`app-d2vcre aaron`), not as you. If Analytics shows `INSUFFICIENT_PERMISSIONS` on catalog `databricks_virtue_foundation_dataset_dais_2026`, run:
+**Analytics permission fix:** The app runs SQL as its service principal (the `luma` app SP), not as you. If Analytics shows `INSUFFICIENT_PERMISSIONS` on catalog `databricks_virtue_foundation_dataset_dais_2026`, run:
 
 ```bash
 npm run setup:permissions
@@ -82,7 +82,7 @@ This uses the Databricks CLI to grant `USE CATALOG`, `USE SCHEMA`, and `SELECT` 
 
 App URL (when running): https://aaron-7474656068082956.aws.databricksapps.com
 
-If deploy fails, check logs in the Databricks UI (**Apps → aaron → Logs**). App logs require OAuth CLI auth:
+If deploy fails, check logs in the Databricks UI (**Apps → luma → Logs**). App logs require OAuth CLI auth:
 ```bash
 databricks auth login --host https://dbc-90be8f46-8e3a.cloud.databricks.com --profile trialbridge
 ```
