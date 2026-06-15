@@ -34,7 +34,8 @@ export function OverviewPage() {
   const nfhsAvg = useMemo(() => {
     if (!nfhs || nfhs.length === 0) return null;
     const n = nfhs.length;
-    const avg = (field: string) => (nfhs.reduce((s, r) => s + (Number((r as Record<string, unknown>)[field]) || 0), 0) / n).toFixed(1);
+    type NfhsRow = typeof nfhs[number];
+    const avg = (field: keyof NfhsRow) => (nfhs.reduce((s, r) => s + (Number(r[field]) || 0), 0) / n).toFixed(1);
     return {
       births: avg('avg_institutional_births_pct'),
       water: avg('avg_improved_water_pct'),

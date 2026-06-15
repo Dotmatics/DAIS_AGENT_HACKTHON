@@ -23,14 +23,16 @@ function gapBorderColor(pct: number): string {
 }
 
 function MetricBar({ label, value }: { label: string; value: number | null }) {
-  if (value === null) return null;
+  const numeric = value !== null && value !== undefined ? Number(value) : null;
+  if (numeric === null || isNaN(numeric)) return null;
+  const value_ = numeric;
   return (
     <div className="flex items-center gap-2">
       <span className="text-xs font-mono w-36 shrink-0 text-muted-foreground">{label}</span>
       <div className="flex-1 h-[3px] bg-[#f0ede8]">
-        <div className="h-full bg-[#FF3621]" style={{ width: `${value}%` }} />
+        <div className="h-full bg-[#FF3621]" style={{ width: `${value_}%` }} />
       </div>
-      <span className="text-xs font-mono w-10 text-right shrink-0">{value}%</span>
+      <span className="text-xs font-mono w-10 text-right shrink-0">{value_}%</span>
     </div>
   );
 }
