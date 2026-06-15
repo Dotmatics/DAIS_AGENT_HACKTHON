@@ -19,15 +19,14 @@ export async function setupIntakeRoutes(appkit: AppKitWithLakebase) {
       try {
         const result = await appkit.lakebase.query(`
           SELECT
-            COUNT(DISTINCT s.id) AS total_sessions,
-            COUNT(DISTINCT cg.id) FILTER (WHERE cg.has_coverage_gap = true) AS coverage_gap_count,
-            ROUND(100.0 * COUNT(DISTINCT cg.id) FILTER (WHERE cg.has_coverage_gap = true)
-              / NULLIF(COUNT(DISTINCT s.id), 0), 1) AS coverage_gap_pct,
-            ROUND(AVG(cg.nearest_distance_km) FILTER (WHERE cg.has_coverage_gap = true), 1) AS avg_gap_distance_km,
-            ROUND(AVG(ib.facility_confidence)::numeric, 2) AS avg_facility_confidence
-          FROM app.sms_sessions s
-          LEFT JOIN app.coverage_gaps cg ON cg.session_id = s.id
-          LEFT JOIN app.intake_bundles ib ON ib.session_id = s.id
+            COUNT(*)::int AS total_sessions,
+            COUNT(*) FILTER (WHERE has_coverage_gap)::int AS coverage_gap_count,
+            ROUND(100.0 * COUNT(*) FILTER (WHERE has_coverage_gap)
+              / NULLIF(COUNT(*), 0), 1)::float8 AS coverage_gap_pct,
+            ROUND(AVG((nearest_facility->>'distanceKm')::numeric)
+              FILTER (WHERE has_coverage_gap), 1)::float8 AS avg_gap_distance_km,
+            ROUND(AVG(facility_confidence)::numeric, 2)::float8 AS avg_facility_confidence
+          FROM intake_app.intake_bundles
         `);
         res.json(result.rows[0] ?? {});
       } catch (err) {
@@ -40,18 +39,19 @@ export async function setupIntakeRoutes(appkit: AppKitWithLakebase) {
     app.get('/api/lakebase/intakes', async (_req, res) => {
       try {
         const result = await appkit.lakebase.query(`
-          SELECT * FROM (
-            SELECT DISTINCT ON (s.id)
-              s.id, s.symptoms, s.district, s.state, s.status, s.created_at,
-              cg.has_coverage_gap, cg.nearest_distance_km,
-              fr.facility_name, fr.distance_km AS recommended_distance_km,
-              ib.geo_confidence, ib.facility_confidence
-            FROM app.sms_sessions s
-            LEFT JOIN app.coverage_gaps cg ON cg.session_id = s.id
-            LEFT JOIN app.facility_recommendations fr ON fr.session_id = s.id AND fr.rank = 1
-            LEFT JOIN app.intake_bundles ib ON ib.session_id = s.id
-            ORDER BY s.id, s.created_at DESC
-          ) sub
+          SELECT
+            id,
+            symptom_summary AS symptoms,
+            chosen_location->>'district' AS district,
+            chosen_location->>'state'    AS state,
+            has_coverage_gap,
+            (nearest_facility->>'distanceKm')::float8 AS nearest_distance_km,
+            nearest_facility->>'name'    AS facility_name,
+            NULL::float8                 AS recommended_distance_km,
+            geo_confidence,
+            facility_confidence,
+            created_at
+          FROM intake_app.intake_bundles
           ORDER BY created_at DESC
           LIMIT 50
         `);
@@ -67,15 +67,14 @@ export async function setupIntakeRoutes(appkit: AppKitWithLakebase) {
       try {
         const result = await appkit.lakebase.query(`
           SELECT
-            s.state,
-            COUNT(DISTINCT s.id) AS session_count,
-            COUNT(DISTINCT cg.id) FILTER (WHERE cg.has_coverage_gap = true) AS gap_count,
-            ROUND(100.0 * COUNT(DISTINCT cg.id) FILTER (WHERE cg.has_coverage_gap = true)
-              / NULLIF(COUNT(DISTINCT s.id), 0), 1) AS gap_pct
-          FROM app.sms_sessions s
-          LEFT JOIN app.coverage_gaps cg ON cg.session_id = s.id
-          WHERE s.state IS NOT NULL
-          GROUP BY s.state
+            chosen_location->>'state'                              AS state,
+            COUNT(*)::int                                          AS session_count,
+            COUNT(*) FILTER (WHERE has_coverage_gap)::int          AS gap_count,
+            ROUND(100.0 * COUNT(*) FILTER (WHERE has_coverage_gap)
+              / NULLIF(COUNT(*), 0), 1)::float8                   AS gap_pct
+          FROM intake_app.intake_bundles
+          WHERE chosen_location->>'state' IS NOT NULL
+          GROUP BY chosen_location->>'state'
           ORDER BY gap_pct DESC
         `);
         res.json(result.rows);
