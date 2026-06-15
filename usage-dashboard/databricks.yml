@@ -1,5 +1,5 @@
 bundle:
-  name: dais-2026-app
+  name: usage-dashboard
 
 variables:
   sql_warehouse_id:
@@ -14,7 +14,7 @@ variables:
 resources:
   apps:
     app:
-      name: "dais-2026-app"
+      name: "usage-dashboard"
       description: "Community Health Access app — India health indicators and facility finder"
       source_code_path: ./
       # Uncomment to enable on behalf of user API scopes. Available scopes: sql, dashboards.genie, files.files, serving.serving-endpoints

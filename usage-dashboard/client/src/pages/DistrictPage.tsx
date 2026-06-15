@@ -5,7 +5,7 @@ import { scaleSequential } from 'd3-scale';
 import { interpolateReds } from 'd3-scale-chromatic';
 import { sql } from '@databricks/appkit-ui/js';
 import { fetchGapsByState, type GapByState } from '../lib/intakeApi';
-import { toGeoName } from '../lib/stateNormalization';
+import { toGeoName, normalizeState } from '../lib/stateNormalization';
 
 import indiaStates from '../assets/india-states.json';
 const GEO_URL = indiaStates;
@@ -60,9 +60,16 @@ export function DistrictPage() {
     fetchGapsByState().then(setGapsByState).catch(console.error);
   }, []);
 
-  const gapMap = useMemo(() => {
+  // Two keyed maps: nfhsGapMap for district-card lookups (NFHS-5 canonical names),
+  // geoGapMap for choropleth fill (datamaps legacy names)
+  const nfhsGapMap = useMemo(() => {
     const m: Record<string, GapByState> = {};
-    // Key by GeoJSON name so choropleth fill lookup matches the bundled TopoJSON
+    gapsByState.forEach(g => { m[normalizeState(g.state)] = g; });
+    return m;
+  }, [gapsByState]);
+
+  const geoGapMap = useMemo(() => {
+    const m: Record<string, GapByState> = {};
     gapsByState.forEach(g => { m[toGeoName(g.state)] = g; });
     return m;
   }, [gapsByState]);
@@ -70,11 +77,11 @@ export function DistrictPage() {
   const filteredDistricts = useMemo(() => {
     if (!districts) return [];
     return [...districts].sort((a, b) => {
-      const gapA = gapMap[a.state_ut]?.gap_pct ?? 0;
-      const gapB = gapMap[b.state_ut]?.gap_pct ?? 0;
+      const gapA = nfhsGapMap[a.state_ut]?.gap_pct ?? 0;
+      const gapB = nfhsGapMap[b.state_ut]?.gap_pct ?? 0;
       return gapB - gapA;
     });
-  }, [districts, gapMap]);
+  }, [districts, nfhsGapMap]);
 
   return (
     <div className="space-y-6 max-w-7xl mx-auto">
@@ -110,7 +117,7 @@ export function DistrictPage() {
                     geographies.map(geo => {
                       if (!geo.properties.name) return null;
                       const stateName: string = geo.properties.name;
-                      const gapData = gapMap[stateName];
+                      const gapData = geoGapMap[stateName];
                       return (
                         <Geography
                           key={geo.rsmKey}
@@ -120,7 +127,10 @@ export function DistrictPage() {
                           strokeWidth={0.5}
                           style={{ default: { outline: 'none' }, hover: { outline: 'none', opacity: 0.8 }, pressed: { outline: 'none' } }}
                           onMouseEnter={(e) => {
-                            const nfhsRow = districts?.find(d => d.state_ut === stateName);
+                            // stateName is datamaps legacy; gapData.state has the original value from sms_sessions
+                            // normalizeState it to find the NFHS-5 canonical name for the tooltip
+                            const nfhsName = gapData ? normalizeState(gapData.state) : stateName;
+                            const nfhsRow = districts?.find(d => d.state_ut === nfhsName);
                             setTooltip({
                               x: e.clientX,
                               y: e.clientY,
@@ -155,7 +165,7 @@ export function DistrictPage() {
           </p>
           {loading && Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-24 w-full" />)}
           {!loading && filteredDistricts.map(row => {
-            const gap = gapMap[row.state_ut];
+            const gap = nfhsGapMap[row.state_ut];
             const borderColor = gapBorderColor(gap?.gap_pct ?? 0);
             return (
               <div key={`${row.state_ut}-${row.district_name}`}
