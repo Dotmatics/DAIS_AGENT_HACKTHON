@@ -36,6 +36,10 @@ export const GEO_NAME_MAP: Record<string, string> = {
   'UK': 'Uttaranchal',
   'J&K': 'Jammu and Kashmir',
   'JK': 'Jammu and Kashmir',
+  // Full modern names → datamaps legacy names (defensive: handles if sms_sessions.state stores full names)
+  'Odisha': 'Orissa',
+  'Uttarakhand': 'Uttaranchal',
+  'Jammu & Kashmir': 'Jammu and Kashmir',
 };
 
 export function normalizeState(state: string): string {
