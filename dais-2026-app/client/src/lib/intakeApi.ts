@@ -3,6 +3,7 @@ export interface IntakeStats {
   coverage_gap_count: number;
   coverage_gap_pct: number;
   avg_gap_distance_km: number | null;
+  avg_facility_confidence: number | null;
 }
 
 export interface IntakeSession {
@@ -16,6 +17,8 @@ export interface IntakeSession {
   nearest_distance_km: number | null;
   facility_name: string | null;
   recommended_distance_km: number | null;
+  geo_confidence: number | null;
+  facility_confidence: number | null;
 }
 
 export interface GapByState {

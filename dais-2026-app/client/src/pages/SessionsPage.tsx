@@ -41,7 +41,7 @@ export function SessionsPage() {
         {[
           { title: 'Coverage Gaps', value: loading ? null : String(dynamicGapCount), accent: true },
           { title: 'Avg Gap Distance', value: loading ? null : stats?.avg_gap_distance_km != null ? `${stats.avg_gap_distance_km} km` : '—', accent: false },
-          { title: 'Avg Facility Confidence', value: loading ? null : '—', accent: false },
+          { title: 'Avg Facility Confidence', value: loading ? null : stats?.avg_facility_confidence != null ? String(stats.avg_facility_confidence) : '—', accent: false },
         ].map(({ title, value, accent }) => (
           <Card key={title} className="bg-white shadow-sm rounded-none border-t-4" style={{ borderTopColor: accent ? '#FF3621' : '#0B2026' }}>
             <CardContent className="pt-4 pb-4">
@@ -89,7 +89,11 @@ export function SessionsPage() {
                       <td className="py-2 pr-4 text-xs">
                         {[s.district, s.state].filter(Boolean).join(', ') || '—'}
                       </td>
-                      <td className="py-2 pr-4 font-mono text-xs text-muted-foreground">—</td>
+                      <td className="py-2 pr-4 font-mono text-xs text-muted-foreground">
+                        {s.isGap
+                          ? (s.geo_confidence != null ? String(s.geo_confidence) : '—')
+                          : (s.facility_confidence != null ? String(s.facility_confidence) : '—')}
+                      </td>
                       <td className="py-2 font-mono text-xs text-muted-foreground">{relativeTime(s.created_at)}</td>
                     </tr>
                   ))}

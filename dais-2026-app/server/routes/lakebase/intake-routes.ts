@@ -23,13 +23,15 @@ export async function setupIntakeRoutes(appkit: AppKitWithLakebase) {
             COUNT(DISTINCT cg.id) FILTER (WHERE cg.has_coverage_gap = true) AS coverage_gap_count,
             ROUND(100.0 * COUNT(DISTINCT cg.id) FILTER (WHERE cg.has_coverage_gap = true)
               / NULLIF(COUNT(DISTINCT s.id), 0), 1) AS coverage_gap_pct,
-            ROUND(AVG(cg.nearest_distance_km) FILTER (WHERE cg.has_coverage_gap = true), 1) AS avg_gap_distance_km
+            ROUND(AVG(cg.nearest_distance_km) FILTER (WHERE cg.has_coverage_gap = true), 1) AS avg_gap_distance_km,
+            ROUND(AVG(ib.facility_confidence)::numeric, 2) AS avg_facility_confidence
           FROM app.sms_sessions s
           LEFT JOIN app.coverage_gaps cg ON cg.session_id = s.id
+          LEFT JOIN app.intake_bundles ib ON ib.session_id = s.id
         `);
         res.json(result.rows[0] ?? {});
       } catch (err) {
-        if (isMissingTable(err)) { res.json({ total_sessions: 0, coverage_gap_count: 0, coverage_gap_pct: 0, avg_gap_distance_km: null }); return; }
+        if (isMissingTable(err)) { res.json({ total_sessions: 0, coverage_gap_count: 0, coverage_gap_pct: 0, avg_gap_distance_km: null, avg_facility_confidence: null }); return; }
         console.error('intakes/stats failed:', err);
         res.status(500).json({ error: 'Failed to load stats' });
       }
@@ -42,10 +44,12 @@ export async function setupIntakeRoutes(appkit: AppKitWithLakebase) {
             SELECT DISTINCT ON (s.id)
               s.id, s.symptoms, s.district, s.state, s.status, s.created_at,
               cg.has_coverage_gap, cg.nearest_distance_km,
-              fr.facility_name, fr.distance_km AS recommended_distance_km
+              fr.facility_name, fr.distance_km AS recommended_distance_km,
+              ib.geo_confidence, ib.facility_confidence
             FROM app.sms_sessions s
             LEFT JOIN app.coverage_gaps cg ON cg.session_id = s.id
             LEFT JOIN app.facility_recommendations fr ON fr.session_id = s.id AND fr.rank = 1
+            LEFT JOIN app.intake_bundles ib ON ib.session_id = s.id
             ORDER BY s.id, s.created_at DESC
           ) sub
           ORDER BY created_at DESC
