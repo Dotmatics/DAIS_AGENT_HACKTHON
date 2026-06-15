@@ -11,7 +11,6 @@ export interface IntakeSession {
   symptoms: string | null;
   district: string | null;
   state: string | null;
-  status: string;
   created_at: string;
   has_coverage_gap: boolean | null;
   nearest_distance_km: number | null;
