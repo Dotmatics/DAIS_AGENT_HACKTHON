@@ -1,6 +1,6 @@
 import { useMemo, useEffect, useState } from 'react';
 import { useAnalyticsQuery, Card, CardContent, CardHeader, CardTitle, Skeleton, Badge } from '@databricks/appkit-ui/react';
-import { Activity, Droplets, Zap, Shield } from 'lucide-react';
+import { Activity, Droplets, Zap, Shield, Flame, BookOpen } from 'lucide-react';
 import { fetchIntakeStats, fetchGapsByState, type IntakeStats, type GapByState } from '../lib/intakeApi';
 import { normalizeState } from '../lib/stateNormalization';
 
@@ -34,11 +34,14 @@ export function OverviewPage() {
   const nfhsAvg = useMemo(() => {
     if (!nfhs || nfhs.length === 0) return null;
     const n = nfhs.length;
+    const avg = (field: string) => (nfhs.reduce((s, r) => s + (Number((r as Record<string, unknown>)[field]) || 0), 0) / n).toFixed(1);
     return {
-      births: (nfhs.reduce((s, r) => s + (r.avg_institutional_births_pct ?? 0), 0) / n).toFixed(1),
-      water: (nfhs.reduce((s, r) => s + (r.avg_improved_water_pct ?? 0), 0) / n).toFixed(1),
-      sanitation: (nfhs.reduce((s, r) => s + (r.avg_improved_sanitation_pct ?? 0), 0) / n).toFixed(1),
-      insurance: (nfhs.reduce((s, r) => s + (r.avg_health_insurance_pct ?? 0), 0) / n).toFixed(1),
+      births: avg('avg_institutional_births_pct'),
+      water: avg('avg_improved_water_pct'),
+      sanitation: avg('avg_improved_sanitation_pct'),
+      insurance: avg('avg_health_insurance_pct'),
+      fuel: avg('avg_clean_fuel_pct'),
+      literacy: avg('avg_women_literacy_pct'),
     };
   }, [nfhs]);
 
@@ -91,10 +94,12 @@ export function OverviewPage() {
             {nfhsLoading ? <Skeleton className="h-24 w-full" /> : (
               <div className="grid grid-cols-2 gap-4">
                 {[
-                  { label: 'Inst. Births', value: nfhsAvg?.births, icon: Activity },
+                  { label: 'Institutional Births', value: nfhsAvg?.births, icon: Activity },
                   { label: 'Clean Water', value: nfhsAvg?.water, icon: Droplets },
                   { label: 'Sanitation', value: nfhsAvg?.sanitation, icon: Zap },
                   { label: 'Health Insurance', value: nfhsAvg?.insurance, icon: Shield },
+                  { label: 'Clean Cooking Fuel', value: nfhsAvg?.fuel, icon: Flame },
+                  { label: 'Women Literacy', value: nfhsAvg?.literacy, icon: BookOpen },
                 ].map(({ label, value, icon: Icon }) => (
                   <div key={label} className="border-t-2 border-[#0B2026] pt-2">
                     <div className="flex items-center gap-1.5 mb-1">
@@ -127,6 +132,8 @@ export function OverviewPage() {
                     <th className="pb-2 pr-4 text-right">Sessions</th>
                     <th className="pb-2 pr-4 text-right">Gap Rate</th>
                     <th className="pb-2 pr-4 text-right">Inst. Births %</th>
+                    <th className="pb-2 pr-4 text-right">Clean Water %</th>
+                    <th className="pb-2 pr-4 text-right">Sanitation %</th>
                     <th className="pb-2 text-right">Insurance %</th>
                   </tr>
                 </thead>
@@ -139,6 +146,8 @@ export function OverviewPage() {
                         <td className="py-2 pr-4 text-right font-mono text-muted-foreground">{gap?.session_count ?? '—'}</td>
                         <td className="py-2 pr-4 text-right font-mono" style={{ color: gap && gap.gap_pct > 50 ? '#FF3621' : undefined }}>{gap ? `${gap.gap_pct}%` : '—'}</td>
                         <td className="py-2 pr-4 text-right">{row.avg_institutional_births_pct ?? '—'}</td>
+                        <td className="py-2 pr-4 text-right">{row.avg_improved_water_pct ?? '—'}</td>
+                        <td className="py-2 pr-4 text-right">{row.avg_improved_sanitation_pct ?? '—'}</td>
                         <td className="py-2 text-right">{row.avg_health_insurance_pct ?? '—'}</td>
                       </tr>
                     );

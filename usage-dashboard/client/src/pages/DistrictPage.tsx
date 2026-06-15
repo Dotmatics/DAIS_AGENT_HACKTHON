@@ -26,11 +26,11 @@ function MetricBar({ label, value }: { label: string; value: number | null }) {
   if (value === null) return null;
   return (
     <div className="flex items-center gap-2">
-      <span className="text-xs font-mono w-16 truncate text-muted-foreground">{label}</span>
+      <span className="text-xs font-mono w-36 shrink-0 text-muted-foreground">{label}</span>
       <div className="flex-1 h-[3px] bg-[#f0ede8]">
         <div className="h-full bg-[#FF3621]" style={{ width: `${value}%` }} />
       </div>
-      <span className="text-xs font-mono w-8 text-right">{value}%</span>
+      <span className="text-xs font-mono w-10 text-right shrink-0">{value}%</span>
     </div>
   );
 }
@@ -177,8 +177,13 @@ export function DistrictPage() {
                     {gap ? `${gap.gap_pct}% gaps (state)` : 'no gap data'}
                   </span>
                 </div>
-                <MetricBar label="Inst. Births" value={row.institutional_births_pct} />
+                <MetricBar label="Institutional Births" value={row.institutional_births_pct} />
                 <MetricBar label="Clean Water" value={row.improved_water_pct} />
+                <MetricBar label="Improved Sanitation" value={row.improved_sanitation_pct} />
+                <MetricBar label="Health Insurance" value={row.health_insurance_pct} />
+                <MetricBar label="Clean Cooking Fuel" value={row.clean_fuel_pct} />
+                <MetricBar label="Women Literacy" value={row.women_literacy_pct} />
+                <MetricBar label="Family Planning" value={row.family_planning_pct} />
               </div>
             );
           })}
