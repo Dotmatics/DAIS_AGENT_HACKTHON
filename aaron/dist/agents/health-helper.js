@@ -1,5 +1,5 @@
-import { findFacilitiesByLatLon } from "../lib/facility-lookup.js";
 import { buildIntakeBundle, persistIntakeBundle } from "../lib/intake-bundle.js";
+import { findFacilitiesByLatLon } from "../lib/facility-lookup.js";
 import { resolveLocation } from "../lib/location-resolver.js";
 import { createAgent, tool } from "@databricks/appkit/beta";
 import { z } from "zod";
@@ -62,11 +62,12 @@ function createHealthTools(deps) {
 				lat: z.number().describe("Latitude of the chosen location"),
 				lon: z.number().describe("Longitude of the chosen location"),
 				symptoms: z.string().describe("The user's described symptoms"),
-				geoConfidence: z.number().min(0).max(1).optional().describe("Geographic confidence of the chosen location (0..1), from resolve_location")
+				geoConfidence: z.number().optional().describe("Geographic confidence of the chosen location (0..1), from resolve_location")
 			}),
 			annotations: { effect: "read" },
 			execute: async (args) => {
-				const match = await findFacilitiesByLatLon(deps.analyticsQuery, args.lat, args.lon, args.symptoms, args.geoConfidence ?? .9);
+				const geoConfidence = Math.max(0, Math.min(1, args.geoConfidence ?? .9));
+				const match = await findFacilitiesByLatLon(deps.analyticsQuery, args.lat, args.lon, args.symptoms, geoConfidence);
 				return {
 					specialty: match.specialty,
 					symptomConfidence: Number(match.symptomConfidence.toFixed(2)),

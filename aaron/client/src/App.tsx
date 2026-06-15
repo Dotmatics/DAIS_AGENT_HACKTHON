@@ -9,7 +9,6 @@ import {
   useIsMobile,
 } from '@databricks/appkit-ui/react';
 import { Menu } from 'lucide-react';
-import { AgentChat } from './pages/agents/AgentChat';
 import { AnalyticsPage } from './pages/analytics/AnalyticsPage';
 import { SmsPage } from './pages/sms/SmsPage';
 
@@ -34,9 +33,6 @@ function NavLinks({ className, linkClass, onClick }: { className?: string; linkC
     <nav className={className}>
       <NavLink to="/" end className={linkClass} onClick={onClick}>
         SMS Health Check
-      </NavLink>
-      <NavLink to="/agents" className={linkClass} onClick={onClick}>
-        Agent Chat
       </NavLink>
       <NavLink to="/analytics" className={linkClass} onClick={onClick}>
         Analytics
@@ -86,7 +82,6 @@ const router = createBrowserRouter([
     element: <Layout />,
     children: [
       { path: '/', element: <SmsPage /> },
-      { path: '/agents', element: <AgentChat /> },
       { path: '/analytics', element: <AnalyticsPage /> },
     ],
   },

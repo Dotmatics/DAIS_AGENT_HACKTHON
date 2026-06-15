@@ -1,0 +1,43 @@
+---
+description: Run Databricks deploys outside the sandbox so OAuth tokens can refresh
+alwaysApply: true
+---
+
+# Databricks deploys must run outside the sandbox
+
+The Databricks CLI caches its OAuth token under `~/.databricks/` (outside the
+workspace). When a command needs to refresh the token, the sandbox blocks the
+write to that cache and the command fails with:
+
+```
+forced token refresh: cache update: exit status 161
+```
+
+This affects `databricks bundle deploy` (the Terraform layer triggers a refresh),
+and can affect `databricks apps deploy`, `databricks sync`, and `databricks auth login`.
+
+## Rule
+
+When running any Databricks CLI command that authenticates, deploys, or syncs,
+ALWAYS pass `required_permissions: ["all"]` to the Shell tool so it runs outside
+the sandbox.
+
+This includes:
+- `databricks bundle deploy` / `databricks bundle validate`
+- `databricks apps deploy` / `databricks apps start`
+- `databricks sync`
+- `databricks auth login`
+- `bash scripts/deploy.sh` (the project deploy wrapper)
+
+```
+# ✅ GOOD — runs outside the sandbox, token refresh works
+Shell(command: "cd aaron && npm run deploy", required_permissions: ["all"])
+
+# ❌ BAD — sandbox blocks token cache write → exit status 161
+Shell(command: "cd aaron && npm run deploy")
+```
+
+Read-only Databricks calls (e.g. `databricks apps logs`, `... get`, `... list`,
+`serving-endpoints query`) generally work in the sandbox with
+`required_permissions: ["full_network"]`, but if any of them fail with the
+`exit status 161` token error, re-run with `required_permissions: ["all"]`.

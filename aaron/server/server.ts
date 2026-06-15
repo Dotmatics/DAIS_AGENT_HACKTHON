@@ -3,7 +3,7 @@ import { agents } from '@databricks/appkit/beta';
 import { setupHealthRoutes } from './routes/lakebase/health-routes';
 import { createHealthTools, createHealthHelperAgent, type HealthToolDeps } from './agents/health-helper';
 import type { AnalyticsQueryFn } from './lib/facility-lookup';
-import type { LakebaseQueryFn } from './lib/sms-processor';
+import type { LakebaseQueryFn } from './lib/intake-bundle';
 
 /**
  * Deferred dependency holder. The agents plugin resolves its ambient `tools`
@@ -49,13 +49,6 @@ createApp({
 
     await setupHealthRoutes({
       lakebase: appkit.lakebase,
-      analytics: {
-        query: (query, parameters) =>
-          appkit.analytics.query(
-            query,
-            parameters as Parameters<typeof appkit.analytics.query>[1],
-          ),
-      },
       server: appkit.server,
     });
   },

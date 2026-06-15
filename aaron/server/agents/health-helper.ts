@@ -13,8 +13,8 @@ import {
   buildIntakeBundle,
   persistIntakeBundle,
   type IntakeBundle,
+  type LakebaseQueryFn,
 } from '../lib/intake-bundle';
-import type { LakebaseQueryFn } from '../lib/sms-processor';
 
 export interface HealthToolDeps {
   analyticsQuery: AnalyticsQueryFn;
@@ -100,19 +100,18 @@ export function createHealthTools(deps: HealthToolDeps): Record<string, AgentToo
       symptoms: z.string().describe("The user's described symptoms"),
       geoConfidence: z
         .number()
-        .min(0)
-        .max(1)
         .optional()
         .describe('Geographic confidence of the chosen location (0..1), from resolve_location'),
     }),
     annotations: { effect: 'read' },
     execute: async (args) => {
+      const geoConfidence = Math.max(0, Math.min(1, args.geoConfidence ?? 0.9));
       const match = await findFacilitiesByLatLon(
         deps.analyticsQuery,
         args.lat,
         args.lon,
         args.symptoms,
-        args.geoConfidence ?? 0.9,
+        geoConfidence,
       );
       return {
         specialty: match.specialty,

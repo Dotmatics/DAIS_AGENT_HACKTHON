@@ -69,9 +69,6 @@ const SYMPTOM_KEYWORDS = {
 		"ill"
 	]
 };
-function specialtyFilterForSymptoms(symptoms) {
-	return classifySymptoms(symptoms).specialty;
-}
 /**
 * Map free-text symptoms to a facility specialty and a confidence score.
 * Confidence reflects how many keywords matched and whether a single specialty
@@ -111,4 +108,4 @@ function classifySymptoms(symptoms) {
 const GAP_THRESHOLD_KM = 50;
 
 //#endregion
-export { GAP_THRESHOLD_KM, classifySymptoms, specialtyFilterForSymptoms };
+export { GAP_THRESHOLD_KM, classifySymptoms };

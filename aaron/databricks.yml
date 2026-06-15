@@ -58,9 +58,11 @@ targets:
       host: https://dbc-61784abb-0041.cloud.databricks.com
 
     variables:
-      agents_serving_endpoint_name: databricks-claude-opus-4-8
-      sql_warehouse_id: e4e23f31c3028908
-      postgres_branch: projects/aaron-health/branches/production
-      postgres_database: projects/aaron-health/branches/production/databases/databricks-postgres
-      postgres_project: projects/aaron-health
+      agents_serving_endpoint_name: databricks-llama-4-maverick
+      sql_warehouse_id: 361e282db86de7f5
+      genie_space_id: 01f168e198f213df858a5970f5c3d6c4
+      genie_space_name: Aaron Location Resolver
+      postgres_branch: projects/dais-2026-app/branches/production
+      postgres_database: projects/dais-2026-app/branches/production/databases/databricks-postgres
+      postgres_project: projects/dais-2026-app
       virtue_foundation_catalog: databricks_virtue_foundation_dataset_dais_2026

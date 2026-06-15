@@ -1,4 +1,8 @@
-import { classifySymptoms, specialtyFilterForSymptoms, GAP_THRESHOLD_KM } from './symptom-mapping';
+import { sql } from '@databricks/appkit';
+import { classifySymptoms, GAP_THRESHOLD_KM } from './symptom-mapping';
+
+/** A SQL type marker produced by the appkit `sql.*` helpers. */
+export type SqlParam = { __sql_type: string; value: string };
 
 export interface FacilityResult {
   name: string;
@@ -14,7 +18,7 @@ export interface FacilityResult {
 
 export type AnalyticsQueryFn = (
   query: string,
-  parameters?: Record<string, string | number | null | undefined>,
+  parameters?: Record<string, SqlParam>,
 ) => Promise<{ rows?: Record<string, unknown>[] }>;
 
 function toStr(v: unknown): string | null {
@@ -95,43 +99,6 @@ function clamp01(v: number): number {
   return Math.max(0, Math.min(1, v));
 }
 
-const NEARBY_FACILITIES_SQL = `
-WITH user_loc AS (
-  SELECT
-    AVG(CAST(latitude AS DOUBLE)) AS lat,
-    AVG(CAST(longitude AS DOUBLE)) AS lon
-  FROM databricks_virtue_foundation_dataset_dais_2026.virtue_foundation_dataset.india_post_pincode_directory
-  WHERE pincode = :postal_code AND latitude != 'NA'
-),
-scored AS (
-  SELECT
-    f.name,
-    f.address_city,
-    f.address_stateOrRegion,
-    f.officialPhone,
-    f.specialties,
-    f.capability,
-    6371 * 2 * ASIN(SQRT(
-      POWER(SIN(RADIANS(f.latitude - u.lat) / 2), 2) +
-      COS(RADIANS(u.lat)) * COS(RADIANS(f.latitude)) *
-      POWER(SIN(RADIANS(f.longitude - u.lon) / 2), 2)
-    )) AS dist_km
-  FROM databricks_virtue_foundation_dataset_dais_2026.virtue_foundation_dataset.facilities f
-  CROSS JOIN user_loc u
-  WHERE f.latitude IS NOT NULL
-    AND f.organization_type = 'facility'
-    AND (
-      :specialty_filter = ''
-      OR f.specialties ILIKE concat('%', :specialty_filter, '%')
-      OR f.capability ILIKE concat('%', :specialty_filter, '%')
-    )
-)
-SELECT name, address_city, address_stateOrRegion, officialPhone, specialties, capability, dist_km
-FROM scored
-ORDER BY dist_km
-LIMIT 5
-`;
-
 const NEARBY_FACILITIES_BY_LATLON_SQL = `
 SELECT
   f.name,
@@ -167,37 +134,6 @@ export interface FacilityMatchResult {
   symptomConfidence: number;
 }
 
-export async function findNearbyFacilities(
-  analyticsQuery: AnalyticsQueryFn,
-  postalCode: string,
-  symptoms: string,
-): Promise<{
-  facilities: FacilityResult[];
-  district: string | null;
-  state: string | null;
-  hasCoverageGap: boolean;
-  nearestDistanceKm: number | null;
-}> {
-  const specialtyFilter = specialtyFilterForSymptoms(symptoms);
-
-  const result = await analyticsQuery(NEARBY_FACILITIES_SQL, {
-    postal_code: postalCode,
-    specialty_filter: specialtyFilter,
-  });
-
-  const rows = (result.rows ?? []).map((r) => mapFacilityRow(r, specialtyFilter, 0.95));
-  const nearest = rows[0]?.dist_km ?? null;
-  const hasCoverageGap = nearest === null || nearest > GAP_THRESHOLD_KM;
-
-  return {
-    facilities: rows,
-    district: null,
-    state: null,
-    hasCoverageGap,
-    nearestDistanceKm: nearest,
-  };
-}
-
 /**
  * Find facilities near an explicit lat/lon (resolved from a pincode or from
  * descriptors). Computes a per-facility confidence that blends proximity,
@@ -214,9 +150,9 @@ export async function findFacilitiesByLatLon(
   const classification = classifySymptoms(symptoms);
 
   const result = await analyticsQuery(NEARBY_FACILITIES_BY_LATLON_SQL, {
-    lat,
-    lon,
-    specialty_filter: classification.specialty,
+    lat: sql.double(lat),
+    lon: sql.double(lon),
+    specialty_filter: sql.string(classification.specialty),
   });
 
   const rows = (result.rows ?? []).map((r) =>
@@ -234,23 +170,3 @@ export async function findFacilitiesByLatLon(
   };
 }
 
-export function formatFacilitySmsReply(
-  facilities: FacilityResult[],
-  hasCoverageGap: boolean,
-  nearestDistanceKm: number | null,
-): string {
-  if (facilities.length === 0) {
-    return 'No facilities found near your pincode. Please contact local emergency services if urgent.';
-  }
-
-  const lines = facilities.slice(0, 3).map((f, i) => {
-    const phone = f.officialPhone ?? 'no phone listed';
-    return `${i + 1}. ${f.name} (${Math.round(f.dist_km)}km) ${phone}`;
-  });
-
-  let msg = `Nearest facilities:\n${lines.join('\n')}`;
-  if (hasCoverageGap && nearestDistanceKm !== null) {
-    msg += `\n\nCoverage gap: nearest facility is ${Math.round(nearestDistanceKm)}km away.`;
-  }
-  return msg.slice(0, 480);
-}

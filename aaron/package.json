@@ -25,7 +25,8 @@
     "typegen": "appkit generate-types",
     "setup": "appkit setup --write",
     "setup:permissions": "bash scripts/grant-analytics-catalog.sh",
-    "setup:deploy": "npm run build && npm run setup:permissions && databricks apps deploy --auto-approve"
+    "setup:deploy": "npm run build && npm run setup:permissions && databricks apps deploy --auto-approve",
+    "deploy": "bash scripts/deploy.sh"
   },
   "keywords": [],
   "author": "",

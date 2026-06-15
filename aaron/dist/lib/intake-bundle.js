@@ -41,9 +41,9 @@ function buildIntakeBundle(input) {
 		hasCoverageGap: input.hasCoverageGap
 	};
 }
-const CREATE_INTAKE_BUNDLES_SQL = `CREATE TABLE IF NOT EXISTS app.intake_bundles (
+const CREATE_INTAKE_BUNDLES_SQL = `CREATE TABLE IF NOT EXISTS intake_app.intake_bundles (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  session_id UUID REFERENCES app.sms_sessions(id) ON DELETE CASCADE,
+  session_id UUID REFERENCES intake_app.sms_sessions(id) ON DELETE CASCADE,
   symptom_summary TEXT,
   location_evidence JSONB,
   chosen_location JSONB,
@@ -58,7 +58,7 @@ const CREATE_INTAKE_BUNDLES_SQL = `CREATE TABLE IF NOT EXISTS app.intake_bundles
 * record bundles even when there is no SMS session row.
 */
 async function persistIntakeBundle(lakebaseQuery, bundle, sessionId = null) {
-	const id = (await lakebaseQuery(`INSERT INTO app.intake_bundles
+	const id = (await lakebaseQuery(`INSERT INTO intake_app.intake_bundles
        (session_id, symptom_summary, location_evidence, chosen_location,
         geo_confidence, nearest_facility, facility_confidence, has_coverage_gap)
      VALUES ($1, $2, $3, $4, $5, $6, $7, $8)

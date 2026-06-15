@@ -1,6 +1,14 @@
-import type { LakebaseQueryFn } from './sms-processor';
 import type { FacilityResult } from './facility-lookup';
 import type { LocationCandidate } from './location-resolver';
+
+/**
+ * Signature for a parameterized Lakebase query. Mirrors the shape of
+ * `appkit.lakebase.query`.
+ */
+export type LakebaseQueryFn = (
+  text: string,
+  params?: unknown[],
+) => Promise<{ rows: Record<string, unknown>[] }>;
 
 /**
  * The deliverable of an intake conversation: a self-contained summary of the
@@ -95,9 +103,9 @@ export function buildIntakeBundle(input: BuildBundleInput): IntakeBundle {
   };
 }
 
-export const CREATE_INTAKE_BUNDLES_SQL = `CREATE TABLE IF NOT EXISTS app.intake_bundles (
+export const CREATE_INTAKE_BUNDLES_SQL = `CREATE TABLE IF NOT EXISTS intake_app.intake_bundles (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  session_id UUID REFERENCES app.sms_sessions(id) ON DELETE CASCADE,
+  session_id UUID REFERENCES intake_app.sms_sessions(id) ON DELETE CASCADE,
   symptom_summary TEXT,
   location_evidence JSONB,
   chosen_location JSONB,
@@ -118,7 +126,7 @@ export async function persistIntakeBundle(
   sessionId: string | null = null,
 ): Promise<string> {
   const result = await lakebaseQuery(
-    `INSERT INTO app.intake_bundles
+    `INSERT INTO intake_app.intake_bundles
        (session_id, symptom_summary, location_evidence, chosen_location,
         geo_confidence, nearest_facility, facility_confidence, has_coverage_gap)
      VALUES ($1, $2, $3, $4, $5, $6, $7, $8)

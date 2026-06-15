@@ -36,7 +36,6 @@ createApp({
 		}));
 		await setupHealthRoutes({
 			lakebase: appkit.lakebase,
-			analytics: { query: (query, parameters) => appkit.analytics.query(query, parameters) },
 			server: appkit.server
 		});
 	}

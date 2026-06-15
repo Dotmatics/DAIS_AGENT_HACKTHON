@@ -9,13 +9,19 @@ import {
 import { sql } from '@databricks/appkit-ui/js';
 import { useEffect, useState } from 'react';
 
-interface GapStats {
-  stats: { total_sessions: string; completed_sessions: string; coverage_gaps: string };
-  recentGaps: Array<{
-    postal_code: string;
-    symptoms: string;
-    nearest_distance_km: number;
-    phone: string;
+interface ChosenLocation {
+  district: string | null;
+  state: string | null;
+  pincode: string | null;
+}
+
+interface IntakeStats {
+  stats: { total_bundles: string; coverage_gaps: string; high_confidence_locations: string };
+  recent: Array<{
+    symptom_summary: string;
+    chosen_location: ChosenLocation | null;
+    geo_confidence: number;
+    has_coverage_gap: boolean;
   }>;
 }
 
@@ -23,12 +29,12 @@ export function AnalyticsPage() {
   const { data, loading, error } = useAnalyticsQuery('underserved_districts', {
     min_facilities: sql.int(3),
   });
-  const [gapStats, setGapStats] = useState<GapStats | null>(null);
+  const [intakeStats, setIntakeStats] = useState<IntakeStats | null>(null);
 
   useEffect(() => {
-    fetch('/api/sms/stats')
+    fetch('/api/intake/stats')
       .then((r) => (r.ok ? r.json() : null))
-      .then(setGapStats)
+      .then(setIntakeStats)
       .catch(() => undefined);
   }, []);
 
@@ -37,38 +43,50 @@ export function AnalyticsPage() {
       <div>
         <h2 className="text-2xl font-bold text-foreground">Healthcare Coverage Analytics</h2>
         <p className="text-sm text-muted-foreground mt-1">
-          Districts with few mapped facilities and SMS intake coverage gaps from Lakebase.
+          Districts with few mapped facilities and agent intake coverage gaps from Lakebase.
         </p>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        {gapStats && (
+        {intakeStats && (
           <Card>
             <CardHeader>
-              <CardTitle>SMS intake summary</CardTitle>
+              <CardTitle>Agent intake summary</CardTitle>
             </CardHeader>
             <CardContent className="text-sm space-y-2">
-              <div>Total sessions: {gapStats.stats.total_sessions}</div>
-              <div>Completed intakes: {gapStats.stats.completed_sessions}</div>
-              <div>Coverage gaps: {gapStats.stats.coverage_gaps}</div>
+              <div>Total intakes: {intakeStats.stats.total_bundles}</div>
+              <div>High-confidence locations: {intakeStats.stats.high_confidence_locations}</div>
+              <div>Coverage gaps: {intakeStats.stats.coverage_gaps}</div>
             </CardContent>
           </Card>
         )}
 
         <Card className="md:col-span-2">
           <CardHeader>
-            <CardTitle>Recent coverage gaps (SMS users)</CardTitle>
+            <CardTitle>Recent intakes</CardTitle>
           </CardHeader>
           <CardContent>
-            {!gapStats && <Skeleton className="h-20 w-full" />}
-            {gapStats?.recentGaps.length === 0 && (
-              <p className="text-sm text-muted-foreground">No gap records yet. Try the SMS demo.</p>
+            {!intakeStats && <Skeleton className="h-20 w-full" />}
+            {intakeStats?.recent.length === 0 && (
+              <p className="text-sm text-muted-foreground">No intakes yet. Try the SMS demo.</p>
             )}
-            {gapStats?.recentGaps.map((g, i) => (
-              <div key={i} className="text-sm border-b py-2 last:border-0">
-                Pincode {g.postal_code} · {Math.round(g.nearest_distance_km)} km to nearest · {g.symptoms}
-              </div>
-            ))}
+            {intakeStats?.recent.map((r, i) => {
+              const loc = [r.chosen_location?.district, r.chosen_location?.state]
+                .filter(Boolean)
+                .join(', ');
+              return (
+                <div
+                  key={`${r.symptom_summary}-${i}`}
+                  className="text-sm border-b py-2 last:border-0"
+                >
+                  {loc || 'Location pending'} · {Math.round((r.geo_confidence ?? 0) * 100)}% geo ·{' '}
+                  {r.symptom_summary}
+                  {r.has_coverage_gap && (
+                    <span className="ml-1 text-amber-600 dark:text-amber-400">(coverage gap)</span>
+                  )}
+                </div>
+              );
+            })}
           </CardContent>
         </Card>
       </div>

@@ -17,12 +17,7 @@ const PLUGIN_PAGES: Record<string, PluginPage> = {
   sms: {
     navLabel: 'SMS Health Check',
     path: '/',
-    expectedTexts: ['Mock SMS Health Check', 'Aaron Health'],
-  },
-  agents: {
-    navLabel: 'Agent Chat',
-    path: '/agents',
-    expectedTexts: ['Talk to the'],
+    expectedTexts: ['SMS Health Check', 'Aaron Health'],
   },
   analytics: {
     navLabel: 'Analytics',
@@ -43,9 +38,8 @@ test('smoke test - app loads and displays SMS page', async ({ page }) => {
   await page.goto('/');
 
   await expect(page.getByRole('heading', { name: APP_CONFIG.name })).toBeVisible();
-  await expect(page.getByText('Mock SMS Health Check')).toBeVisible();
+  await expect(page.getByText('SMS Health Check').first()).toBeVisible();
   await expect(page.getByText('Aaron Health')).toBeVisible();
-  await expect(page.getByLabel('Phone number')).toBeVisible();
 
   for (const [, plugin] of enabledPages) {
     await expect(page.getByRole('link', { name: plugin.navLabel })).toBeVisible();

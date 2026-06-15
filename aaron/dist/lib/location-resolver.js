@@ -1,3 +1,5 @@
+import { sql } from "@databricks/appkit";
+
 //#region server/lib/location-resolver.ts
 const PINCODE_RE = /\b(\d{6})\b/;
 function extractPincode(text) {
@@ -95,7 +97,7 @@ function classifyMatchLevel(score, hasOfficeHit, hasDistrictHit) {
 * unknown / has no geocoded post offices.
 */
 async function resolvePincode(analyticsQuery, pincode) {
-	const candidates = ((await analyticsQuery(PINCODE_LOOKUP_SQL, { pincode })).rows ?? []).filter((r) => Number.isFinite(toNum(r.lat)) && Number.isFinite(toNum(r.lon))).map((r) => {
+	const candidates = ((await analyticsQuery(PINCODE_LOOKUP_SQL, { pincode: sql.string(pincode) })).rows ?? []).filter((r) => Number.isFinite(toNum(r.lat)) && Number.isFinite(toNum(r.lon))).map((r) => {
 		const matchedRows = toNum(r.matched_rows) || 1;
 		return {
 			pincode: str(r.pincode),
@@ -133,9 +135,9 @@ async function resolveDescriptors(analyticsQuery, hints) {
 	const district = (hints.district ?? "").trim();
 	const state = (hints.state ?? "").trim();
 	const candidates = ((await analyticsQuery(DESCRIPTOR_LOOKUP_SQL, {
-		q: text,
-		district,
-		state
+		q: sql.string(text),
+		district: sql.string(district),
+		state: sql.string(state)
 	})).rows ?? []).filter((r) => Number.isFinite(toNum(r.lat)) && Number.isFinite(toNum(r.lon))).map((r) => {
 		const score = toNum(r.score) || 0;
 		const matchedRows = toNum(r.matched_rows) || 1;
