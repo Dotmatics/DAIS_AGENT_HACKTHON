@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# End-to-end deploy for the Aaron health intake app.
+# End-to-end deploy for the Luma health intake app.
 #
 # Steps:
 #   1. Preflight: verify the Databricks CLI token is valid (fails fast with a
@@ -19,7 +19,7 @@
 #   DATABRICKS_CONFIG_PROFILE=hackdais ./scripts/deploy.sh
 set -euo pipefail
 
-APP_NAME="${DATABRICKS_APP_NAME:-aaron}"
+APP_NAME="${DATABRICKS_APP_NAME:-luma}"
 PROFILE="${DATABRICKS_CONFIG_PROFILE:-${DATABRICKS_PROFILE:-hackdais}}"
 
 # Run from the bundle root (this script's parent directory) regardless of cwd.
