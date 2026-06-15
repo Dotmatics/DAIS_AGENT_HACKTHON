@@ -1,1 +1,13 @@
+node_modules/
+dist/
+.env
+.env.*
+!.env.example
+.databricks/
+*.log
 .DS_Store
+coverage/
+playwright-report/
+test-results/
+.smoke-test/
+.cursor/
