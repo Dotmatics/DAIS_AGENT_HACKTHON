@@ -6,6 +6,10 @@ variables:
     description: Default LLM serving endpoint name
   sql_warehouse_id:
     description: SQL Warehouse ID
+  genie_space_id:
+    description: Genie Space ID used for location resolution
+  genie_space_name:
+    description: Genie Space display name
   postgres_branch:
     description: Full Lakebase Postgres branch resource name. Obtain by running `databricks postgres list-branches {project-name}`, select the desired item from the output array and use its .name value. Requires the project resource name.
   postgres_database:
@@ -21,9 +25,10 @@ resources:
       name: "aaron"
       description: "SMS health intake and facility finder for rural users"
       source_code_path: ./
-      # Uncomment to enable on behalf of user API scopes. Available scopes: sql, dashboards.genie, files.files, serving.serving-endpoints
-      # user_api_scopes:
-      #   - sql
+      user_api_scopes:
+        - sql
+        - dashboards.genie
+        - serving.serving-endpoints
 
       # The resources which this app has access to.
       resources:
@@ -35,6 +40,11 @@ resources:
           sql_warehouse:
             id: ${var.sql_warehouse_id}
             permission: CAN_USE
+        - name: genie-space
+          genie_space:
+            name: ${var.genie_space_name}
+            space_id: ${var.genie_space_id}
+            permission: CAN_RUN
         - name: postgres
           postgres:
             branch: ${var.postgres_branch}
@@ -45,7 +55,7 @@ targets:
   default:
     default: true
     workspace:
-      host: https://dbc-90be8f46-8e3a.cloud.databricks.com
+      host: https://dbc-61784abb-0041.cloud.databricks.com
 
     variables:
       agents_serving_endpoint_name: databricks-claude-opus-4-8

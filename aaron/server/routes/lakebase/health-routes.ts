@@ -2,6 +2,7 @@ import { z } from 'zod';
 import type { Application } from 'express';
 import { processSmsMessage, type LakebaseQueryFn } from '../../lib/sms-processor';
 import type { AnalyticsQueryFn } from '../../lib/facility-lookup';
+import { CREATE_INTAKE_BUNDLES_SQL } from '../../lib/intake-bundle';
 
 const SCHEMA_SQL = `CREATE SCHEMA IF NOT EXISTS app`;
 
@@ -48,6 +49,7 @@ const CREATE_TABLES_SQL = [
     postal_code TEXT,
     created_at TIMESTAMPTZ NOT NULL DEFAULT now()
   )`,
+  CREATE_INTAKE_BUNDLES_SQL,
 ];
 
 const InboundSmsBody = z.object({
@@ -168,6 +170,23 @@ export async function setupHealthRoutes(appkit: HealthAppKit) {
       } catch (err) {
         console.error('SMS stats failed:', err);
         res.status(500).json({ error: 'Failed to load stats' });
+      }
+    });
+
+    app.get('/api/intake/bundles', async (_req, res) => {
+      try {
+        const bundles = await appkit.lakebase.query(`
+          SELECT id, symptom_summary, location_evidence, chosen_location,
+                 geo_confidence, nearest_facility, facility_confidence,
+                 has_coverage_gap, created_at
+          FROM app.intake_bundles
+          ORDER BY created_at DESC
+          LIMIT 20
+        `);
+        res.json({ bundles: bundles.rows });
+      } catch (err) {
+        console.error('Intake bundles fetch failed:', err);
+        res.status(500).json({ error: 'Failed to load intake bundles' });
       }
     });
   });

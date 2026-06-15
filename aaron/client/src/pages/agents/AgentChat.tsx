@@ -1,9 +1,12 @@
 import { useEffect, useRef, useState } from 'react';
 import {
   type AgentChatEvent,
+  Badge,
   Button,
   Card,
   CardContent,
+  CardHeader,
+  CardTitle,
   Input,
   useAgentChat,
   usePluginClientConfig,
@@ -14,6 +17,109 @@ interface Message {
   role: 'user' | 'assistant' | 'tool';
   content: string;
   toolName?: string;
+}
+
+interface IntakeBundle {
+  symptomSummary: string;
+  chosenLocation: {
+    pincode: string | null;
+    officename: string | null;
+    district: string | null;
+    state: string | null;
+  } | null;
+  geoConfidence: number;
+  nearestFacility: {
+    name: string;
+    phone: string | null;
+    distanceKm: number | null;
+    specialties: string | null;
+  } | null;
+  facilityConfidence: number;
+  hasCoverageGap: boolean;
+}
+
+function confidenceLabel(score: number): { label: string; variant: 'default' | 'secondary' | 'destructive' } {
+  if (score >= 0.8) return { label: `High (${Math.round(score * 100)}%)`, variant: 'default' };
+  if (score >= 0.55) return { label: `Medium (${Math.round(score * 100)}%)`, variant: 'secondary' };
+  return { label: `Low (${Math.round(score * 100)}%)`, variant: 'destructive' };
+}
+
+function locationText(loc: IntakeBundle['chosenLocation']): string {
+  if (!loc) return 'Not resolved';
+  return [loc.officename, loc.district, loc.state].filter(Boolean).join(', ') +
+    (loc.pincode ? ` (${loc.pincode})` : '');
+}
+
+function IntakeSummaryCard({ bundle }: { bundle: IntakeBundle }) {
+  const geo = confidenceLabel(bundle.geoConfidence);
+  const fac = confidenceLabel(bundle.facilityConfidence);
+  return (
+    <Card className="border-primary/40">
+      <CardHeader className="pb-3">
+        <CardTitle className="text-base flex items-center gap-2">
+          Intake summary
+          {bundle.hasCoverageGap && (
+            <Badge variant="destructive">Coverage gap</Badge>
+          )}
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="text-sm space-y-3">
+        <div>
+          <div className="text-muted-foreground">Symptoms</div>
+          <div>{bundle.symptomSummary || '—'}</div>
+        </div>
+        <div>
+          <div className="text-muted-foreground flex items-center gap-2">
+            Location
+            <Badge variant={geo.variant}>{geo.label}</Badge>
+          </div>
+          <div>{locationText(bundle.chosenLocation)}</div>
+        </div>
+        <div>
+          <div className="text-muted-foreground flex items-center gap-2">
+            Nearest facility
+            <Badge variant={fac.variant}>{fac.label}</Badge>
+          </div>
+          {bundle.nearestFacility ? (
+            <div>
+              <div className="font-medium">{bundle.nearestFacility.name}</div>
+              <div className="text-muted-foreground">
+                {bundle.nearestFacility.distanceKm != null
+                  ? `${Math.round(bundle.nearestFacility.distanceKm)} km`
+                  : 'distance unknown'}
+                {bundle.nearestFacility.phone ? ` · ${bundle.nearestFacility.phone}` : ''}
+              </div>
+              {bundle.nearestFacility.specialties && (
+                <div className="text-xs text-muted-foreground mt-1">
+                  {bundle.nearestFacility.specialties}
+                </div>
+              )}
+            </div>
+          ) : (
+            <div className="text-muted-foreground">No facility matched</div>
+          )}
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+function parseBundle(output: string | undefined): IntakeBundle | null {
+  if (!output) return null;
+  try {
+    const parsed: unknown = JSON.parse(output);
+    if (
+      parsed &&
+      typeof parsed === 'object' &&
+      'bundle' in parsed &&
+      (parsed as { bundle?: unknown }).bundle
+    ) {
+      return (parsed as { bundle: IntakeBundle }).bundle;
+    }
+  } catch {
+    return null;
+  }
+  return null;
 }
 
 /**
@@ -57,14 +163,14 @@ export function AgentChat() {
   const activeAgent = defaultAgent ?? agents[0] ?? null;
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
+  const [bundle, setBundle] = useState<IntakeBundle | null>(null);
   const [pendingAssistantId, setPendingAssistantId] = useState<string | null>(
     null,
   );
   const scrollRef = useRef<HTMLDivElement | null>(null);
 
-  // Surface tool-call events as inline messages. Sub-agent delegations
-  // show up here as `agent-helper` tool calls — same wire shape as a
-  // function tool, so the same row renders both.
+  // Surface tool-call events as inline rows, and capture the final intake
+  // bundle from `build_intake_bundle`'s output to render the summary card.
   const handleEvent = (event: AgentChatEvent) => {
     if (
       event.type === 'response.output_item.added' &&
@@ -81,6 +187,11 @@ export function AgentChat() {
         },
       ]);
     }
+
+    if (event.item?.type === 'function_call_output') {
+      const parsed = parseBundle(event.item.output);
+      if (parsed) setBundle(parsed);
+    }
   };
 
   const { content, isStreaming, error, send } = useAgentChat({
@@ -92,6 +203,7 @@ export function AgentChat() {
   // tool-call rows interleave correctly with deltas.
   useEffect(() => {
     if (!pendingAssistantId) return;
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- mirror streaming deltas into the pending assistant message
     setMessages((prev) =>
       prev.map((m) =>
         m.id === pendingAssistantId ? { ...m, content } : m,
@@ -129,8 +241,9 @@ export function AgentChat() {
       <div>
         <h2 className="text-2xl font-bold text-foreground">Agent Chat</h2>
         <p className="text-sm text-muted-foreground mt-1">
-          Talk to the <code className="mx-1">intake</code> agent for conversational health intake
-          with the <code className="mx-1">health-helper</code> sub-agent for facility lookup.
+          Talk to the <code className="mx-1">intake</code> agent. It resolves your location from a
+          pincode or a description, asks follow-ups when unsure, finds the nearest suitable
+          facility, and produces a confidence-scored intake summary.
         </p>
       </div>
 
@@ -141,7 +254,8 @@ export function AgentChat() {
         >
           {messages.length === 0 && (
             <p className="text-sm text-muted-foreground text-center mt-8">
-              Try: &quot;I am in pincode 504273, age 45, having fever and chest pain&quot;
+              Try: &quot;I&apos;m not feeling well&quot; — or &quot;I&apos;m near Film Nagar in
+              Hyderabad with chest pain&quot;
             </p>
           )}
           {messages.map((m) => {
@@ -176,7 +290,12 @@ export function AgentChat() {
           })}
         </CardContent>
 
-        <form onSubmit={handleSubmit} className="p-3 border-t flex gap-2">
+        <form
+          onSubmit={(e) => {
+            void handleSubmit(e);
+          }}
+          className="p-3 border-t flex gap-2"
+        >
           <Input
             value={input}
             onChange={(e) => setInput(e.target.value)}
@@ -195,6 +314,8 @@ export function AgentChat() {
           </Button>
         </form>
       </Card>
+
+      {bundle && <IntakeSummaryCard bundle={bundle} />}
 
       {error && <div className="text-sm text-destructive">Error: {error}</div>}
     </div>
