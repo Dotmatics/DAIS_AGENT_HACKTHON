@@ -23,7 +23,9 @@
     "predev": "npm run sync && npm run typegen",
     "sync": "appkit plugin sync --write --silent",
     "typegen": "appkit generate-types",
-    "setup": "appkit setup --write"
+    "setup": "appkit setup --write",
+    "setup:permissions": "bash scripts/grant-analytics-catalog.sh",
+    "setup:deploy": "npm run build && npm run setup:permissions && databricks apps deploy --auto-approve"
   },
   "keywords": [],
   "author": "",

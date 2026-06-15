@@ -12,6 +12,8 @@ variables:
     description: Full Lakebase Postgres database resource name. Obtain by running `databricks postgres list-databases {branch-name}`, select the desired item from the output array and use its .name value. Requires the branch resource name.
   postgres_project:
     description: Full Lakebase Postgres project resource name. Obtain by running `databricks postgres list-projects`, select the desired item from the output array and use its .name value.
+  virtue_foundation_catalog:
+    description: Unity Catalog containing the Virtue Foundation hackathon dataset (facilities, pincode directory). Grant to app SP via npm run setup:permissions.
 
 resources:
   apps:
@@ -51,3 +53,4 @@ targets:
       postgres_branch: projects/aaron-health/branches/production
       postgres_database: projects/aaron-health/branches/production/databases/databricks-postgres
       postgres_project: projects/aaron-health
+      virtue_foundation_catalog: databricks_virtue_foundation_dataset_dais_2026
