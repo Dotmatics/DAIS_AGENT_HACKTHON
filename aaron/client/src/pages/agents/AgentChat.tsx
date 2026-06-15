@@ -127,16 +127,10 @@ export function AgentChat() {
   return (
     <div className="space-y-6 w-full max-w-4xl mx-auto">
       <div>
-        <h2 className="text-2xl font-bold text-foreground">Chat</h2>
+        <h2 className="text-2xl font-bold text-foreground">Agent Chat</h2>
         <p className="text-sm text-muted-foreground mt-1">
-          You're talking to <code className="mx-1">planner</code>, a
-          markdown agent at
-          <code className="mx-1">config/agents/planner/agent.md</code>.
-          For computational actions it delegates to its sub-agent
-          <code className="mx-1">helper</code> (code-defined at
-          <code className="mx-1">server/agents/helper.ts</code>), which
-          surfaces as an
-          <code className="mx-1">agent-helper</code> tool call.
+          Talk to the <code className="mx-1">intake</code> agent for conversational health intake
+          with the <code className="mx-1">health-helper</code> sub-agent for facility lookup.
         </p>
       </div>
 
@@ -147,10 +141,7 @@ export function AgentChat() {
         >
           {messages.length === 0 && (
             <p className="text-sm text-muted-foreground text-center mt-8">
-              Try "help me plan a feature" for a planning conversation,
-              or "what time is it?" / "count the words in: the quick
-              brown fox" to watch planner delegate to{' '}
-              <code>agent-helper</code>.
+              Try: &quot;I am in pincode 504273, age 45, having fever and chest pain&quot;
             </p>
           )}
           {messages.map((m) => {

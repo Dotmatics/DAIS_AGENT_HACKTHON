@@ -1,106 +1,109 @@
 import {
   useAnalyticsQuery,
-  AreaChart,
-  LineChart,
-  RadarChart,
   Card,
   CardContent,
   CardHeader,
   CardTitle,
   Skeleton,
-  Label,
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
 } from '@databricks/appkit-ui/react';
-import { sql } from "@databricks/appkit-ui/js";
-import { useState } from 'react';
+import { sql } from '@databricks/appkit-ui/js';
+import { useEffect, useState } from 'react';
+
+interface GapStats {
+  stats: { total_sessions: string; completed_sessions: string; coverage_gaps: string };
+  recentGaps: Array<{
+    postal_code: string;
+    symptoms: string;
+    nearest_distance_km: number;
+    phone: string;
+  }>;
+}
 
 export function AnalyticsPage() {
-  const { data, loading, error } = useAnalyticsQuery('hello_world', {
-    message: sql.string('hello world'),
+  const { data, loading, error } = useAnalyticsQuery('underserved_districts', {
+    min_facilities: sql.int(3),
   });
+  const [gapStats, setGapStats] = useState<GapStats | null>(null);
 
-  const [maxMonthNum, setMaxMonthNum] = useState<number>(12);
-  const salesParameters = { max_month_num: sql.number(maxMonthNum) };
+  useEffect(() => {
+    fetch('/api/sms/stats')
+      .then((r) => (r.ok ? r.json() : null))
+      .then(setGapStats)
+      .catch(() => undefined);
+  }, []);
 
   return (
     <div className="space-y-6 w-full max-w-7xl mx-auto">
+      <div>
+        <h2 className="text-2xl font-bold text-foreground">Healthcare Coverage Analytics</h2>
+        <p className="text-sm text-muted-foreground mt-1">
+          Districts with few mapped facilities and SMS intake coverage gaps from Lakebase.
+        </p>
+      </div>
+
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <Card className="shadow-lg">
-          <CardHeader>
-            <CardTitle>SQL Query Result</CardTitle>
-          </CardHeader>
-          <CardContent>
-            {loading && (
-              <div className="space-y-2">
-                <Skeleton className="h-4 w-3/4" />
-                <Skeleton className="h-8 w-1/2" />
-              </div>
-            )}
-            {error && <div className="text-destructive bg-destructive/10 p-3 rounded-md">Error: {error}</div>}
-            {data && data.length > 0 && (
-              <div className="space-y-2">
-                <div className="text-sm text-muted-foreground">Query: SELECT :message AS value</div>
-                <div className="text-2xl font-bold text-primary">{data[0].value}</div>
-              </div>
-            )}
-            {data && data.length === 0 && <div className="text-muted-foreground">No results</div>}
-          </CardContent>
-        </Card>
+        {gapStats && (
+          <Card>
+            <CardHeader>
+              <CardTitle>SMS intake summary</CardTitle>
+            </CardHeader>
+            <CardContent className="text-sm space-y-2">
+              <div>Total sessions: {gapStats.stats.total_sessions}</div>
+              <div>Completed intakes: {gapStats.stats.completed_sessions}</div>
+              <div>Coverage gaps: {gapStats.stats.coverage_gaps}</div>
+            </CardContent>
+          </Card>
+        )}
 
-        <Card className="shadow-lg md:col-span-2">
+        <Card className="md:col-span-2">
           <CardHeader>
-            <CardTitle>Sales Data Filter</CardTitle>
+            <CardTitle>Recent coverage gaps (SMS users)</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="max-w-md">
-              <div className="space-y-2">
-                <Label htmlFor="max-month">Show data up to month</Label>
-                <Select value={maxMonthNum.toString()} onValueChange={(value) => setMaxMonthNum(parseInt(value))}>
-                  <SelectTrigger id="max-month">
-                    <SelectValue placeholder="All months" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {Array.from({ length: 12 }, (_, i) => (
-                      <SelectItem key={`month-${i + 1}`} value={(i + 1).toString()}>
-                        {i + 1 === 12 ? 'All months (12)' : `Month ${i + 1}`}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+            {!gapStats && <Skeleton className="h-20 w-full" />}
+            {gapStats?.recentGaps.length === 0 && (
+              <p className="text-sm text-muted-foreground">No gap records yet. Try the SMS demo.</p>
+            )}
+            {gapStats?.recentGaps.map((g, i) => (
+              <div key={i} className="text-sm border-b py-2 last:border-0">
+                Pincode {g.postal_code} · {Math.round(g.nearest_distance_km)} km to nearest · {g.symptoms}
               </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="shadow-lg flex min-w-0">
-          <CardHeader>
-            <CardTitle>Sales Trend Area Chart</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <AreaChart queryKey="mocked_sales" parameters={salesParameters} />
-          </CardContent>
-        </Card>
-        <Card className="shadow-lg flex min-w-0">
-          <CardHeader>
-            <CardTitle>Sales Trend Line Chart</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <LineChart queryKey="mocked_sales" parameters={salesParameters} />
-          </CardContent>
-        </Card>
-        <Card className="shadow-lg flex min-w-0">
-          <CardHeader>
-            <CardTitle>Sales Trend Radar Chart</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <RadarChart queryKey="mocked_sales" parameters={salesParameters} />
+            ))}
           </CardContent>
         </Card>
       </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Underserved districts (Virtue Foundation dataset)</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {loading && <Skeleton className="h-32 w-full" />}
+          {error && <div className="text-destructive text-sm">Error: {error}</div>}
+          {data && data.length > 0 && (
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b text-left">
+                    <th className="py-2 pr-4">State</th>
+                    <th className="py-2 pr-4">District</th>
+                    <th className="py-2">Facilities</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {data.map((row, i) => (
+                    <tr key={i} className="border-b last:border-0">
+                      <td className="py-2 pr-4">{String(row.state)}</td>
+                      <td className="py-2 pr-4">{String(row.district)}</td>
+                      <td className="py-2">{String(row.facility_count)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 }

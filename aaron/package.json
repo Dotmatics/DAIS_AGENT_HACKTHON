@@ -20,7 +20,6 @@
     "test:e2e:ui": "playwright test --ui",
     "test:smoke": "playwright install chromium && playwright test tests/smoke.spec.ts",
     "clean": "rm -rf client/dist dist build node_modules .smoke-test test-results playwright-report",
-    "postinstall": "npm run typegen",
     "prebuild": "npm run sync && npm run typegen",
     "predev": "npm run sync && npm run typegen",
     "sync": "appkit plugin sync --write --silent",
@@ -31,6 +30,9 @@
   "author": "",
   "license": "Unlicensed",
   "description": "SMS health intake and facility finder for rural users",
+  "engines": {
+    "node": ">=22"
+  },
   "dependencies": {
     "@databricks/appkit": "0.38.1",
     "@databricks/appkit-ui": "0.38.1",

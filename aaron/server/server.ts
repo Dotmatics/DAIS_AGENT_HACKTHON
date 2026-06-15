@@ -1,16 +1,27 @@
 import { createApp, analytics, lakebase, server } from '@databricks/appkit';
 import { agents } from '@databricks/appkit/beta';
-import { setupSampleLakebaseRoutes } from './routes/lakebase/todo-routes';
-import { helper } from './agents/helper';
+import { setupHealthRoutes } from './routes/lakebase/health-routes';
 
 createApp({
   plugins: [
-    agents({ agents: { helper } }),
+    agents({
+      approval: { requireForDestructive: false },
+    }),
     analytics(),
     lakebase(),
     server(),
   ],
   async onPluginsReady(appkit) {
-    await setupSampleLakebaseRoutes(appkit);
+    await setupHealthRoutes({
+      lakebase: appkit.lakebase,
+      analytics: {
+        query: (query, parameters) =>
+          appkit.analytics.query(
+            query,
+            parameters as Parameters<typeof appkit.analytics.query>[1],
+          ),
+      },
+      server: appkit.server,
+    });
   },
 }).catch(console.error);
