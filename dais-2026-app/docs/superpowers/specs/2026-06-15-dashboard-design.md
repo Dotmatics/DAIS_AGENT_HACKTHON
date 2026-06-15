@@ -31,14 +31,79 @@ A three-page analytics dashboard for health system operators. Primary story: "Th
 
 ## Data Sources
 
-| Data | Source | Access pattern |
-|------|--------|----------------|
-| `total_sessions`, `coverage_gap_count`, `avg_geo_confidence`, `avg_facility_confidence`, `coverage_gap_pct` | Lakebase `app.intake_bundles` | Express route `GET /api/lakebase/intakes/stats` |
-| Recent intake sessions (last 50) | Lakebase `app.intake_bundles` | Express route `GET /api/lakebase/intakes` |
-| State/district health indicators | UC `nfhs_5_district_health_indicators` | `useAnalyticsQuery('state_summary')`, `useAnalyticsQuery('district_health_indicators')` |
-| Facility counts | UC `facilities` | `useAnalyticsQuery('facilities_by_state')` (existing, may be retired) |
+### Lakebase tables (written by `aaron/` agent, queried via Express routes)
 
-**Gap threshold** is a client-side config value (default 50km) stored in React context. It filters the intake sessions client-side — the Lakebase query returns all sessions, the UI applies the threshold. This means no re-fetch when the user changes the threshold.
+Four normalized tables in the `app` schema:
+
+| Table | Key columns |
+|-------|-------------|
+| `app.sms_sessions` | `id`, `phone`, `status`, `postal_code`, `age`, `symptoms`, `district`, `state`, `user_lat`, `user_lon`, `created_at` |
+| `app.sms_messages` | `id`, `session_id`, `direction`, `body`, `created_at` |
+| `app.facility_recommendations` | `id`, `session_id`, `facility_name`, `facility_phone`, `distance_km`, `specialties`, `rank`, `is_nearest_appropriate`, `created_at` |
+| `app.coverage_gaps` | `id`, `session_id`, `nearest_distance_km`, `gap_threshold_km`, `has_coverage_gap`, `symptoms`, `postal_code`, `created_at` |
+
+**Confidence scores** (`geo_confidence`, `facility_confidence`) will be added to the schema by the agent teammate. Dashboard treats them as optional until present — KPIs show `—` if columns are absent.
+
+### Express routes (dashboard server, `intake-routes.ts`)
+
+**`GET /api/lakebase/intakes/stats`** — aggregate stats:
+```sql
+SELECT
+  COUNT(DISTINCT s.id) AS total_sessions,
+  COUNT(DISTINCT cg.id) FILTER (WHERE cg.has_coverage_gap = true) AS coverage_gap_count,
+  ROUND(100.0 * COUNT(DISTINCT cg.id) FILTER (WHERE cg.has_coverage_gap = true)
+    / NULLIF(COUNT(DISTINCT s.id), 0), 1) AS coverage_gap_pct,
+  ROUND(AVG(cg.nearest_distance_km) FILTER (WHERE cg.has_coverage_gap = true), 1) AS avg_gap_distance_km
+FROM app.sms_sessions s
+LEFT JOIN app.coverage_gaps cg ON cg.session_id = s.id
+```
+
+**`GET /api/lakebase/intakes`** — last 50 sessions with gap and top recommendation joined:
+```sql
+SELECT
+  s.id, s.symptoms, s.district, s.state, s.status, s.created_at,
+  cg.has_coverage_gap, cg.nearest_distance_km,
+  fr.facility_name, fr.distance_km AS recommended_distance_km
+FROM app.sms_sessions s
+LEFT JOIN app.coverage_gaps cg ON cg.session_id = s.id
+LEFT JOIN app.facility_recommendations fr ON fr.session_id = s.id AND fr.rank = 1
+ORDER BY s.created_at DESC
+LIMIT 50
+```
+
+**`GET /api/lakebase/gaps-by-state`** — gap rate per state for Overview bar chart:
+```sql
+SELECT
+  s.state,
+  COUNT(DISTINCT s.id) AS session_count,
+  COUNT(DISTINCT cg.id) FILTER (WHERE cg.has_coverage_gap = true) AS gap_count,
+  ROUND(100.0 * COUNT(DISTINCT cg.id) FILTER (WHERE cg.has_coverage_gap = true)
+    / NULLIF(COUNT(DISTINCT s.id), 0), 1) AS gap_pct
+FROM app.sms_sessions s
+LEFT JOIN app.coverage_gaps cg ON cg.session_id = s.id
+WHERE s.state IS NOT NULL
+GROUP BY s.state
+ORDER BY gap_pct DESC
+```
+
+All three routes handle missing tables gracefully (Postgres error code `42P01` → return empty/zeroed response).
+
+### Unity Catalog (via `useAnalyticsQuery`)
+
+| Query key | Used on |
+|-----------|---------|
+| `state_summary` | Overview — NFHS-5 national KPIs + state table |
+| `district_health_indicators` | Districts — metric bars on district cards |
+
+`facilities_by_state` query is retired.
+
+### Gap threshold
+
+Client-side React context (`GapThresholdContext`), default 50km. The `/api/lakebase/intakes` route returns `nearest_distance_km` for every session, so the UI re-evaluates `has_coverage_gap` client-side against the current threshold (overriding the server-computed boolean). This means the slider updates counts and status without a refetch.
+
+### State name normalization
+
+NFHS-5 uses `state_ut` (e.g. "Uttar Pradesh"); `sms_sessions` uses `state` (free text from pincode lookup, e.g. "Uttar Pradesh" or "UP"). A static normalization map is required to join them in the Overview state table. Implementation will include a `NORMALIZATION_MAP` constant for known variants.
 
 ---
 
@@ -70,14 +135,14 @@ Four KPI cards in a 4-column grid, each with a top rule:
 - Gap Rate (`#0B2026` rule)
 
 ### Section 2 — Two-column row
-**Left:** Coverage Gaps by State — horizontal bar chart, bars in `#FF3621`, state names in monospace, sorted descending by gap rate. Data: aggregate from `intake_bundles` grouped by `chosen_location->>'state'`.
+**Left:** Coverage Gaps by State — horizontal bar chart, bars in `#FF3621`, state names in monospace, sorted descending by gap rate. Data: `GET /api/lakebase/gaps-by-state` → `gap_pct` per `state`.
 
 **Right:** National Health Indicators (NFHS-5) — 2×2 grid of mini-KPIs (institutional births, health insurance, clean water, sanitation). Each with a `#0B2026` top rule. Data: `state_summary` query averages.
 
 ### Section 3 — State Summary Table
 Full-width table. Columns: State, Sessions, Gap Rate, Inst. Births %, Insurance %.  
 Gap Rate column values in `#FF3621` when >50%.  
-Data: `intake_bundles` aggregated by `chosen_location->>'state'` for session/gap columns; `state_summary` for NFHS-5 columns. These are displayed as separate columns — no SQL join needed, both keyed by state name in the UI. Note: state name normalization (e.g. "Uttar Pradesh" vs "UP") may require a client-side mapping.
+Data: `gaps-by-state` route for session/gap columns; `state_summary` query for NFHS-5 columns. These are separate columns merged in the UI by state name using `NORMALIZATION_MAP`.
 
 ---
 
@@ -89,19 +154,20 @@ Data: `intake_bundles` aggregated by `chosen_location->>'state'` for session/gap
 
 ### Layout: Two-column
 **Left column:**
-- Choropleth map of India districts using **react-simple-maps** + India district GeoJSON
-- Fill color: white → `#FF3621` gradient based on coverage gap rate per district
-- Hover tooltip: district name, gap rate, NFHS-5 institutional births %, nearest facility distance
-- No data districts: `#eee` fill
+- Choropleth map of India **states** using **react-simple-maps** + India states GeoJSON (36 states/UTs)
+- Fill color: white → `#FF3621` gradient based on `gap_pct` from `GET /api/lakebase/gaps-by-state`
+- Hover tooltip: state name, gap rate, session count, NFHS-5 institutional births %
+- No data states: `#eee` fill
 - Legend: inline below map (High gap >50%, Medium, Low, No data)
+- State-level chosen for demo reliability: clean GeoJSON, reliable name matching via `NORMALIZATION_MAP`
 
 **Right column:**
-- District cards, sorted by gap rate descending
-- Each card: left border color = gap severity (`#FF3621` high, `#f5a89a` medium, `#eee` low)
-- Card content: district name (Georgia serif), gap rate (right-aligned), metric bars for institutional births + water access
+- District cards, sorted by gap rate descending (gap rate = `gap_count / session_count` from `gaps-by-state`, scoped to selected state)
+- Each card: left border color = gap severity (`#FF3621` high >50%, `#f5a89a` medium 25–50%, `#eee` low)
+- Card content: district name (Georgia serif), gap rate (right-aligned), NFHS-5 metric bars for institutional births + water access from `district_health_indicators`
 - Metric bars: thin (3px), cream background, `#FF3621` fill for health metrics, `#0B2026` (40% opacity) for infrastructure metrics
 
-**Map data:** Gap rate per district computed client-side from `intake_bundles` (grouped by `chosen_location->>'district'`). NFHS-5 overlay from `district_health_indicators` query. Joined by district name.
+**Note:** District cards show NFHS-5 health indicators (from UC) alongside the state-level gap rate. Per-district gap data is not available from `sms_sessions` reliably enough for demo — cards show the state gap rate as context.
 
 ---
 
@@ -113,7 +179,7 @@ Data: `intake_bundles` aggregated by `chosen_location->>'state'` for session/gap
 ### Section 1 — Stats Row
 Three KPI cards (3-column grid):
 - Coverage Gaps (`#FF3621` top rule, value in `#FF3621`)
-- Avg Gap Distance in km (`#0B2026` rule) — avg of `nearest_facility->>'distance_km'` where `has_coverage_gap = true`
+- Avg Gap Distance in km (`#0B2026` rule) — `avg_gap_distance_km` from `/api/lakebase/intakes/stats`
 - Avg Facility Confidence (`#0B2026` rule)
 
 ### Section 2 — Sessions Feed
@@ -122,8 +188,8 @@ Table of last 50 intake sessions from `/api/lakebase/intakes`.
 Columns: Status | Symptoms | Location | Confidence | Time
 
 - **Status**: "⚠ GAP" in `#FF3621` bold (when `has_coverage_gap = true` AND distance > threshold) or "✓ MATCHED" in `#2a7a6f` bold
-- **Symptoms**: `symptom_summary` field
-- **Location**: `chosen_location->>'district'`, `chosen_location->>'state'`
+- **Symptoms**: `symptoms` field from `sms_sessions`
+- **Location**: `district`, `state` (flat columns from `sms_sessions`)
 - **Confidence**: show `geo_confidence` or `facility_confidence` (whichever is more relevant — facility for matched, geo for gaps)
 - **Time**: relative time from `created_at`
 
