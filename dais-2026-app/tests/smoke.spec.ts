@@ -21,12 +21,12 @@ const PLUGIN_PAGES: Record<string, PluginPage> = {
   analytics: {
     navLabel: 'Districts',
     path: '/districts',
-    expectedTexts: ['District Health Indicators'],
+    expectedTexts: ['District Health & Coverage'],
   },
   lakebase: {
-    navLabel: 'Facilities',
-    path: '/facilities',
-    expectedTexts: ['Healthcare Facilities'],
+    navLabel: 'Sessions',
+    path: '/sessions',
+    expectedTexts: ['Agent Session Activity'],
   },
 };
 
