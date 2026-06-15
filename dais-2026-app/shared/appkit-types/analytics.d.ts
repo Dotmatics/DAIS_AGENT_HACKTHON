@@ -36,20 +36,6 @@ declare module "@databricks/appkit-ui/react" {
           households_surveyed: number;
         }>;
       };
-    facilities_by_state: {
-        name: "facilities_by_state";
-        parameters: Record<string, never>;
-        result: Array<{
-          /** @sqlType STRING */
-          state: string;
-          /** @sqlType STRING */
-          organization_type: string;
-          /** @sqlType BIGINT */
-          facility_count: number;
-          /** @sqlType BIGINT */
-          with_doctors: number;
-        }>;
-      };
     state_summary: {
         name: "state_summary";
         parameters: Record<string, never>;
