@@ -38,14 +38,17 @@ export async function setupIntakeRoutes(appkit: AppKitWithLakebase) {
     app.get('/api/lakebase/intakes', async (_req, res) => {
       try {
         const result = await appkit.lakebase.query(`
-          SELECT DISTINCT ON (s.id)
-            s.id, s.symptoms, s.district, s.state, s.status, s.created_at,
-            cg.has_coverage_gap, cg.nearest_distance_km,
-            fr.facility_name, fr.distance_km AS recommended_distance_km
-          FROM app.sms_sessions s
-          LEFT JOIN app.coverage_gaps cg ON cg.session_id = s.id
-          LEFT JOIN app.facility_recommendations fr ON fr.session_id = s.id AND fr.rank = 1
-          ORDER BY s.id, s.created_at DESC
+          SELECT * FROM (
+            SELECT DISTINCT ON (s.id)
+              s.id, s.symptoms, s.district, s.state, s.status, s.created_at,
+              cg.has_coverage_gap, cg.nearest_distance_km,
+              fr.facility_name, fr.distance_km AS recommended_distance_km
+            FROM app.sms_sessions s
+            LEFT JOIN app.coverage_gaps cg ON cg.session_id = s.id
+            LEFT JOIN app.facility_recommendations fr ON fr.session_id = s.id AND fr.rank = 1
+            ORDER BY s.id, s.created_at DESC
+          ) sub
+          ORDER BY created_at DESC
           LIMIT 50
         `);
         res.json(result.rows);
