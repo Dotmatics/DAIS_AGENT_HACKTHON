@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
-# Grant the Aaron app service principal read access to the Virtue Foundation
+# Grant the Luma app service principal read access to the Virtue Foundation
 # Unity Catalog. Required for Analytics queries and facility lookup at runtime.
 set -euo pipefail
 
-APP_NAME="${DATABRICKS_APP_NAME:-aaron}"
+APP_NAME="${DATABRICKS_APP_NAME:-luma}"
 CATALOG="${VIRTUE_FOUNDATION_CATALOG:-databricks_virtue_foundation_dataset_dais_2026}"
 PROFILE="${DATABRICKS_CONFIG_PROFILE:-${DATABRICKS_PROFILE:-trialbridge}}"
 

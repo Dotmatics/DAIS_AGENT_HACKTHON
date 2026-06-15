@@ -105,7 +105,7 @@ export function buildIntakeBundle(input: BuildBundleInput): IntakeBundle {
 
 export const CREATE_INTAKE_BUNDLES_SQL = `CREATE TABLE IF NOT EXISTS intake_app.intake_bundles (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  session_id UUID REFERENCES intake_app.sms_sessions(id) ON DELETE CASCADE,
+  session_id UUID,
   symptom_summary TEXT,
   location_evidence JSONB,
   chosen_location JSONB,

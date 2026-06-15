@@ -3,7 +3,7 @@ import { writeFileSync, mkdirSync } from 'node:fs';
 import { join } from 'node:path';
 
 const APP_CONFIG = {
-  name: 'Aaron — Rural Health SMS',
+  name: 'Luma — Rural Health SMS',
   plugins: ['analytics', 'lakebase', 'agents'],
 } as const;
 
@@ -15,9 +15,9 @@ interface PluginPage {
 
 const PLUGIN_PAGES: Record<string, PluginPage> = {
   sms: {
-    navLabel: 'SMS Health Check',
+    navLabel: 'SMS',
     path: '/',
-    expectedTexts: ['SMS Health Check', 'Aaron Health'],
+    expectedTexts: ['Rural Health SMS', 'Luma Health'],
   },
   analytics: {
     navLabel: 'Analytics',
@@ -38,8 +38,8 @@ test('smoke test - app loads and displays SMS page', async ({ page }) => {
   await page.goto('/');
 
   await expect(page.getByRole('heading', { name: APP_CONFIG.name })).toBeVisible();
-  await expect(page.getByText('SMS Health Check').first()).toBeVisible();
-  await expect(page.getByText('Aaron Health')).toBeVisible();
+  await expect(page.getByText('Rural Health SMS')).toBeVisible();
+  await expect(page.getByText('Luma Health')).toBeVisible();
 
   for (const [, plugin] of enabledPages) {
     await expect(page.getByRole('link', { name: plugin.navLabel })).toBeVisible();
@@ -55,6 +55,12 @@ for (const [name, plugin] of enabledPages) {
     }
   });
 }
+
+test('smoke test - legacy agents route redirects to SMS', async ({ page }) => {
+  await page.goto('/agents');
+  await expect(page).toHaveURL('/');
+  await expect(page.getByText('Luma Health')).toBeVisible();
+});
 
 test.beforeEach(async ({ page }) => {
   consoleLogs = [];

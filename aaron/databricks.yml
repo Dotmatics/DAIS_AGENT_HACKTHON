@@ -1,5 +1,5 @@
 bundle:
-  name: aaron
+  name: luma
 
 variables:
   agents_serving_endpoint_name:
@@ -22,7 +22,7 @@ variables:
 resources:
   apps:
     app:
-      name: "aaron"
+      name: "luma"
       description: "SMS health intake and facility finder for rural users"
       source_code_path: ./
       user_api_scopes:

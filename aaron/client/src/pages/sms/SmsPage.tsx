@@ -10,6 +10,7 @@ import {
   usePluginClientConfig,
 } from '@databricks/appkit-ui/react';
 import { ArrowUp, Battery, ChevronLeft, HeartPulse, Info, Plus, Signal, Wifi } from 'lucide-react';
+import { PageHeader } from '../../components/PageHeader';
 
 interface Message {
   id: string;
@@ -147,7 +148,7 @@ function PhoneSmsChat({
                   <HeartPulse className="h-[18px] w-[18px] text-white" strokeWidth={2.5} />
                 </div>
                 <div className="min-w-0">
-                  <div className="truncate text-[15px] font-semibold text-white">Aaron Health</div>
+                  <div className="truncate text-[15px] font-semibold text-white">Luma Health</div>
                   <div className="truncate text-[11px] text-zinc-400">{phone || 'Demo SMS line'}</div>
                 </div>
               </div>
@@ -167,7 +168,7 @@ function PhoneSmsChat({
                   <div className="mb-3 flex h-14 w-14 items-center justify-center rounded-full bg-white/5 ring-1 ring-white/10">
                     <HeartPulse className="h-7 w-7 text-emerald-400" />
                   </div>
-                  <p className="text-sm font-medium text-zinc-300">Aaron Rural Health SMS</p>
+                  <p className="text-sm font-medium text-zinc-300">Luma Rural Health SMS</p>
                   <p className="mt-2 text-xs leading-relaxed text-zinc-500">
                     Try &quot;I&apos;m not feeling well&quot; — the agent asks for your location
                     (pincode or a description), understands your symptoms, and finds the nearest
@@ -379,14 +380,10 @@ export function SmsPage() {
   return (
     <div className="grid grid-cols-1 gap-8 xl:grid-cols-[minmax(0,1fr)_340px] max-w-7xl mx-auto">
       <div className="space-y-6">
-        <div className="text-center xl:text-left">
-          <h2 className="text-2xl font-bold text-foreground">SMS Health Check</h2>
-          <p className="text-sm text-muted-foreground mt-1 max-w-xl mx-auto xl:mx-0">
-            Simulates SMS for rural users. The intake agent resolves your location from a pincode or
-            a free-text description, asks follow-ups when it&apos;s unsure, maps your symptoms, and
-            recommends the nearest suitable facility with confidence scores.
-          </p>
-        </div>
+        <PageHeader
+          title="Rural Health SMS"
+          subtitle="Simulates SMS for rural users. The intake agent resolves your location from a pincode or a free-text description, asks follow-ups when it's unsure, maps your symptoms, and recommends the nearest suitable facility with confidence scores."
+        />
 
         <PhoneSmsChat
           phone={phone}
