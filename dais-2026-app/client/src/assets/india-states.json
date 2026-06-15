@@ -1,0 +1,12 @@
+{
+  "type": "Topology",
+  "objects": {
+    "states": {
+      "type": "GeometryCollection",
+      "geometries": [
+        {"type": "Point", "coordinates": [78.96, 20.59]}
+      ]
+    }
+  },
+  "arcs": []
+}
