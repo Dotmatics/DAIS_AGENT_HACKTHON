@@ -8,7 +8,7 @@
 
 ## Overview
 
-A three-page analytics dashboard for health system operators. Primary story: "The intake agent is helping people in underserved areas find care — and here's where it's failing to find care nearby." The dashboard reads agent activity data from Lakebase (`app.intake_bundles`) and health indicator data from Unity Catalog (NFHS-5).
+A three-page analytics dashboard for health system operators. Primary story: "The intake agent is helping people in underserved areas find care — and here's where it's failing to find care nearby." The dashboard reads agent activity data from four Lakebase tables (`app.sms_sessions`, `app.coverage_gaps`, `app.facility_recommendations`, `app.sms_messages`) and health indicator data from Unity Catalog (NFHS-5).
 
 **Audience:** Health program managers, policy analysts, hackathon judges.  
 **Primary question answered:** Where are coverage gaps, and how do they correlate with poor health outcomes?
@@ -216,10 +216,13 @@ Current routes `/districts` and `/facilities` are replaced:
 Replace `todo-routes.ts` with `intake-routes.ts`:
 
 **`GET /api/lakebase/intakes/stats`**  
-Returns aggregate stats from `app.intake_bundles`. If table doesn't exist (TableMissing error code `42P01`), returns zeroed object — no crash.
+Returns aggregate stats via JOIN of `app.sms_sessions` + `app.coverage_gaps`. If tables don't exist (error code `42P01`), returns zeroed object — no crash.
 
 **`GET /api/lakebase/intakes`**  
-Returns last 50 rows ordered by `created_at DESC`. Same graceful missing-table handling.
+Returns last 50 sessions via JOIN of `app.sms_sessions` + `app.coverage_gaps` + `app.facility_recommendations` (rank=1, with `DISTINCT ON (s.id)` to guard against duplicate rank-1 rows). Same graceful missing-table handling.
+
+**`GET /api/lakebase/gaps-by-state`**  
+Returns gap rate per state via JOIN of `app.sms_sessions` + `app.coverage_gaps`. Same graceful missing-table handling.
 
 No writes — the dashboard is read-only against Lakebase.
 
