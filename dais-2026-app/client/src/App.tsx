@@ -32,7 +32,7 @@ function Layout() {
       <header className="bg-[#0B2026] px-4 md:px-6 py-3 flex items-center gap-4">
         <div className="flex items-center gap-2">
           <HeartPulse className="h-5 w-5 text-[#FF3621]" />
-          <h1 className="text-lg font-serif font-bold text-white">India Health Access</h1>
+          <h1 className="text-lg font-serif font-bold text-white">Usage Dashboard</h1>
         </div>
         <nav className="hidden md:flex gap-1 ml-4">
           <NavLink to="/" end className={navLinkClass}>Overview</NavLink>
